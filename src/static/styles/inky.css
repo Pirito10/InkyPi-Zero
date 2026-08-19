@@ -1,0 +1,70 @@
+/* Scoped redesign for the main dashboard page only — does not touch main.css */
+
+/* Header icon buttons — hover-to-accent matches .icon-action-button elsewhere */
+.header-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.settings-button:hover {
+    color: var(--accent-primary);
+}
+
+/* The dark-mode toggle used to be the only header button with its own custom
+   hover-text tooltip; drop it so all four buttons behave the same (native
+   title tooltip only). */
+.settings-button.dark-mode-toggle::after {
+    content: none;
+}
+
+/* Real SVGs replace the old ::before emoji content */
+.settings-button.dark-mode-toggle::before,
+html[data-theme="dark"] .settings-button.dark-mode-toggle::before {
+    content: none;
+}
+
+.settings-button.dark-mode-toggle .icon-moon {
+    display: none;
+}
+
+html[data-theme="dark"] .settings-button.dark-mode-toggle .icon-sun {
+    display: none;
+}
+
+html[data-theme="dark"] .settings-button.dark-mode-toggle .icon-moon {
+    display: block;
+}
+
+/* Current image card */
+.image-container {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    width: fit-content;
+}
+
+.image-container img {
+    border-radius: 8px;
+}
+
+/* Plugin cards */
+.plugins-container .plugin-item {
+    border-radius: 12px;
+}
+
+.plugins-container .plugin-item:hover {
+    border-color: var(--accent-primary);
+}
+
+/* Sort/view toggle buttons, matching the icon-action-button pattern used elsewhere */
+.view-toggle,
+.sort-toggle {
+    border-radius: 8px;
+}
+
+.sort-toggle.active {
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
