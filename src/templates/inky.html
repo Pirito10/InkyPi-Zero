@@ -14,6 +14,7 @@
             }
         })();
         let lastModified = null;
+        let currentObjectUrl = null;
         const refreshIntervalMs = 3 * 1000;
 
         async function refreshImage() {
@@ -27,7 +28,7 @@
                 }
 
                 const response = await fetch('{{ url_for("main.get_current_image") }}', { headers });
-                
+
                 if (response.status === 304) {
                     return;
                 }
@@ -39,17 +40,44 @@
 
                 const blob = await response.blob();
                 const objectUrl = URL.createObjectURL(blob);
-                
+
+                if (currentObjectUrl) {
+                    URL.revokeObjectURL(currentObjectUrl);
+                }
+
                 img.src = objectUrl;
+                currentObjectUrl = objectUrl;
                 lastModified = response.headers.get('Last-Modified');
             } catch (error) {
                 console.error('Error refreshing image:', error);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        let refreshIntervalId = null;
+
+        function startPolling() {
+            if (refreshIntervalId) return;
             refreshImage();
-            setInterval(refreshImage, refreshIntervalMs);
+            refreshIntervalId = setInterval(refreshImage, refreshIntervalMs);
+        }
+
+        function stopPolling() {
+            clearInterval(refreshIntervalId);
+            refreshIntervalId = null;
+        }
+
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                startPolling();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!document.hidden) {
+                startPolling();
+            }
         });
     </script>
     <script src="{{ url_for('static', filename='scripts/image_modal.js') }}"></script>
