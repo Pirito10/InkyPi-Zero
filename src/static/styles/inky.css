@@ -10,19 +10,6 @@
     color: var(--accent-primary);
 }
 
-/* The dark-mode toggle used to be the only header button with its own custom
-   hover-text tooltip; drop it so all four buttons behave the same (native
-   title tooltip only). */
-.settings-button.dark-mode-toggle::after {
-    content: none;
-}
-
-/* Real SVGs replace the old ::before emoji content */
-.settings-button.dark-mode-toggle::before,
-html[data-theme="dark"] .settings-button.dark-mode-toggle::before {
-    content: none;
-}
-
 .settings-button.dark-mode-toggle .icon-moon {
     display: none;
 }

@@ -297,7 +297,7 @@ body {
     padding: 0.5rem;
     font-size: 1rem;
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
     box-sizing: border-box;
     min-width: 50px;
     background-color: var(--input-bg);
@@ -310,7 +310,7 @@ body {
     background-color: var(--input-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 0.5rem;
     transition: all 0.3s ease;
 }
@@ -332,7 +332,7 @@ textarea {
     background-color: var(--input-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 0.5rem;
     font-size: 1rem;
     font-family: 'Poppins', sans-serif;
@@ -367,19 +367,28 @@ small {
     background-color: var(--button-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
-    border-radius: 5px;
+    border-radius: 8px;
     padding: 10px 20px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
     margin-bottom: 20px;
-    text-align: left;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     width: fit-content;
     transition: all 0.3s ease;
 }
 
 .back-button:hover {
     background-color: var(--button-hover);
+    color: var(--accent-primary);
+}
+
+.back-button svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
 /* Action buttons styling */
@@ -388,7 +397,7 @@ small {
     background-color: var(--accent-primary);
     color: #fff;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     padding: 15px;
     font-size: 1.1rem;
     font-weight: bold;
@@ -439,7 +448,7 @@ small {
     padding: 0.4rem;
     font-size: 1rem;
     border: 1px solid var(--border-subtle);
-    border-radius: 5px;
+    border-radius: 8px;
     box-sizing: border-box;
     background-color: var(--input-bg);
     color: var(--text-primary);
@@ -596,39 +605,9 @@ small {
     box-shadow: 0px 5px 8px var(--shadow-light);
 }
 
-/* Dark mode toggle button (sun/moon icon) */
+/* Dark mode toggle button (sun/moon SVG icon, swapped by data-theme in page CSS) */
 .settings-button.dark-mode-toggle {
-    font-size: 1.2rem;
     position: relative;
-}
-
-.settings-button.dark-mode-toggle::before {
-    content: "☀️";
-    transition: all 0.3s ease;
-}
-
-html[data-theme="dark"] .settings-button.dark-mode-toggle::before {
-    content: "🌙";
-}
-
-/* Hover text for dark mode toggle */
-.settings-button.dark-mode-toggle::after {
-    content: attr(data-hover-text);
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 100%;
-    margin-top: 5px;
-    white-space: nowrap;
-    font-size: 0.85rem;
-    font-weight: 500;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
-
-.settings-button.dark-mode-toggle:hover::after {
-    opacity: 1;
 }
 
 /* Modal Styling */
@@ -772,7 +751,7 @@ html[data-theme="dark"] .settings-button.dark-mode-toggle::before {
     width: 30px;
     height: 30px;
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: var(--input-bg);
     cursor: pointer;
     font-size: 1rem;
@@ -959,7 +938,7 @@ html[data-theme="dark"] .settings-button.dark-mode-toggle::before {
     padding: 0.4rem;
     font-size: 1rem;
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
     box-sizing: border-box;
     text-align: center;
     background-color: var(--input-bg);
