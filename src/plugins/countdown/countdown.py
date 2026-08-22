@@ -5,6 +5,12 @@ import logging
 import pytz
 
 logger = logging.getLogger(__name__)
+
+MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
+
 class Countdown(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -16,7 +22,7 @@ class Countdown(BasePlugin):
         countdown_date_str = settings.get('date')
 
         if not countdown_date_str:
-            raise RuntimeError("Date is required.")
+            raise RuntimeError("La fecha es obligatoria.")
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
@@ -30,8 +36,8 @@ class Countdown(BasePlugin):
         countdown_date = tz.localize(countdown_date)
 
         day_count = (countdown_date.date() - current_time.date()).days
-        label = "Days Left" if day_count >= 0 else "Days Passed"
-        date_str = countdown_date.strftime("%B %d, %Y")
+        label = "Días restantes" if day_count >= 0 else "Días transcurridos"
+        date_str = f"{countdown_date.day} de {MONTHS_ES[countdown_date.month - 1]} de {countdown_date.year}"
 
         def draw_content(draw, content_box, text_color):
             left, top, right, bottom = content_box
