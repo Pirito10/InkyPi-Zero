@@ -1,11 +1,15 @@
 <div class="form-group">
     <div class="form-group">
-        <label for="title" class="form-label">Title</label>
-        <input type="text" id="title" name="title" placeholder="Type something..." required class="form-input">
+        <label for="title" class="form-label">Título</label>
+        <input type="text" id="title" name="title" placeholder="Escribe algo..." required class="form-input">
     </div>
     <div class="form-group">
-        <label for="date" class="form-label">Date</label>
-        <input type="date" id="date" name="date" class="form-input" />
+        <label for="date" class="form-label">Fecha</label>
+        <input type="date" id="date" name="date" class="form-input" required />
+    </div>
+    <div class="form-group">
+        <input type="checkbox" id="hideDate" name="hideDate" value="true" onclick="this.value=this.checked ? 'true' : 'false';">
+        <span>Ocultar fecha</span>
     </div>
 </div>
 
@@ -14,6 +18,7 @@
         if (loadPluginSettings) {
             document.getElementById('title').value = pluginSettings.title || '';
             document.getElementById('date').value = pluginSettings.date;
+            document.getElementById('hideDate').checked = pluginSettings.hideDate === 'true';
         }
     });
 </script>

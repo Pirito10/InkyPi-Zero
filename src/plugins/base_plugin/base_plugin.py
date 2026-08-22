@@ -5,6 +5,7 @@ from utils.image_utils import take_screenshot_html
 from utils.image_loader import AdaptiveImageLoader
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
+from PIL import Image, ImageDraw
 import asyncio
 import base64
 
@@ -102,3 +103,54 @@ class BasePlugin:
         rendered_html = template.render(template_params)
 
         return take_screenshot_html(rendered_html, dimensions)
+
+    def render_image_pil(self, dimensions, settings, draw_content):
+        """
+        PIL-based alternative to render_image(), for plugins that draw
+        directly instead of rendering HTML/CSS through a browser. Applies
+        the same Style options (frame, margin, background, text color) that
+        render/plugin.html applies for the browser-rendered plugins, then
+        calls draw_content(draw, content_box, text_color) to draw the
+        plugin-specific content, where content_box = (left, top, right,
+        bottom) is the drawable area inside the frame/margins/padding.
+        """
+        width, height = dimensions
+        text_color = settings.get("textColor") or "#000000"
+
+        if settings.get("backgroundOption") == "image" and settings.get("backgroundImageFile"):
+            image = Image.open(settings["backgroundImageFile"]).convert("RGB")
+            image = image.resize((width, height))
+        else:
+            background_color = settings.get("backgroundColor") or "#ffffff"
+            image = Image.new("RGB", (width, height), background_color)
+
+        draw = ImageDraw.Draw(image)
+
+        default_margin = 5
+        top = int(settings.get("topMargin") or settings.get("margin") or default_margin)
+        bottom = int(settings.get("bottomMargin") or settings.get("margin") or default_margin)
+        left = int(settings.get("leftMargin") or settings.get("margin") or default_margin)
+        right = int(settings.get("rightMargin") or settings.get("margin") or default_margin)
+        outer_box = (left, top, width - right, height - bottom)
+
+        frame = settings.get("selectedFrame")
+        frame_width = max(2, round(width * 0.007))
+        l, t, r, b = outer_box
+        if frame == "Rectangle":
+            draw.rectangle(outer_box, outline=text_color, width=frame_width)
+        elif frame == "Top and Bottom":
+            draw.line([(l, t), (r, t)], fill=text_color, width=frame_width)
+            draw.line([(l, b), (r, b)], fill=text_color, width=frame_width)
+        elif frame == "Corner":
+            corner_size = round(width * 0.10)
+            draw.line([(l, t), (l + corner_size, t)], fill=text_color, width=frame_width)
+            draw.line([(l, t), (l, t + corner_size)], fill=text_color, width=frame_width)
+            draw.line([(r - corner_size, b), (r, b)], fill=text_color, width=frame_width)
+            draw.line([(r, b - corner_size), (r, b)], fill=text_color, width=frame_width)
+
+        padding = round(width * 0.015)
+        content_box = (l + padding, t + padding, r - padding, b - padding)
+
+        draw_content(draw, content_box, text_color)
+
+        return image
