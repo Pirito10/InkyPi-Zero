@@ -44,6 +44,14 @@
         <label for="showDate" class="toggle-label"></label>
     </div>
 </div>
+<div class="form-group" id="show-day-progress-group" style="display: none;">
+    <label for="showDayProgress" class="form-label">Mostrar progreso del día:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showDayProgress" name="showDayProgress" class="toggle-checkbox" value="false"
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showDayProgress" class="toggle-label"></label>
+    </div>
+</div>
 
 <script>
     function selectClockFace(element) {
@@ -62,10 +70,11 @@
         document.querySelector("[name=primaryColor]").value = element.dataset.primaryColor;
         document.querySelector("[name=secondaryColor]").value = element.dataset.secondaryColor;
 
-        // The time format (AM/PM) and date only apply to the Digital Clock face
+        // The time format (AM/PM), date and day progress only apply to the Digital Clock face
         const isDigitalClock = selectedFaceName === 'Digital Clock';
         document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
         document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
+        document.getElementById('show-day-progress-group').style.display = isDigitalClock ? '' : 'none';
     }
 
     // Default selection for the first clock face or based on plugin_settings
@@ -91,6 +100,7 @@
             const isDigitalClock = selectedFaceName === 'Digital Clock';
             document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
             document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
+            document.getElementById('show-day-progress-group').style.display = isDigitalClock ? '' : 'none';
         }
 
         if (pluginSettings.primaryColor) {
@@ -103,5 +113,6 @@
             document.getElementById('timeFormat').value = pluginSettings.timeFormat;
         }
         document.getElementById('showDate').checked = pluginSettings.showDate === 'true';
+        document.getElementById('showDayProgress').checked = pluginSettings.showDayProgress === 'true';
     });
 </script>
