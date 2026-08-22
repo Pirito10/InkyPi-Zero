@@ -224,38 +224,50 @@ class Clock(BasePlugin):
             minute_str = "0" + str(minute_str)
         return f"{hour_str}:{minute_str}"
 
+    _base_theta_cache = {}
+
+    @staticmethod
+    def _base_theta(w, h):
+        # arctan2(x-cx, y-cy) only depends on the canvas size, not on the
+        # clock's current angles, so it can be reused across calls/renders
+        # instead of being recomputed (it is the single costliest step).
+        key = (w, h)
+        theta0 = Clock._base_theta_cache.get(key)
+        if theta0 is None:
+            x, y = np.ogrid[:h, :w]
+            cx, cy = h / 2, w / 2
+            theta0 = np.arctan2(x - cx, y - cy)
+            Clock._base_theta_cache[key] = theta0
+        return theta0
+
     @staticmethod
     def draw_gradient_image(w, h, start_angle, end_angle, start_color, end_color):
         """
         Draw a gradient that starts at start_angle and ends at end_angle, using RGBA colors.
         Angles are interpreted for a clock face (0 at 12 o'clock, increasing clockwise).
         """
-        x,y = np.ogrid[:h,:w]
-        cx,cy = h/2, w/2
-
         start_angle = -start_angle
         end_angle = -end_angle
 
-        theta = (np.arctan2(x-cx,y-cy) - start_angle)  % (2*np.pi)
+        theta = (Clock._base_theta(w, h) - start_angle) % (2*np.pi)
 
         angle_range = ((end_angle-start_angle) % (2 * np.pi))
         if angle_range == 0:
             angle_range = 2*np.pi  # Special case: full circle gradient
 
         anglemask = theta <= angle_range
-        theta = theta / angle_range  # Normalize to [0, 1] within range
+        theta = (theta / angle_range).astype(np.float32)  # Normalize to [0, 1] within range
 
-        # Interpolate colors between start and end within the mask
-        gradient = np.zeros((h, w, 4), dtype=np.uint8)
-        start_color = Clock.pad_color(start_color)
-        end_color = Clock.pad_color(end_color)
-        for c in range(4):  # Iterate through RGBA channels
-            gradient[..., c] = (
-                start_color[c] * (1 - theta) + end_color[c] * (theta)
-            ).astype(np.uint8)
-        
-        # Fill with the specified solid color
-        gradient[~anglemask] = (0, 0, 0, 0)
+        # Interpolate colors between start and end within the mask, blending
+        # all 4 RGBA channels in a single broadcasted operation instead of
+        # looping over channels in Python.
+        start_color = np.array(Clock.pad_color(start_color), dtype=np.float32)
+        end_color = np.array(Clock.pad_color(end_color), dtype=np.float32)
+        color_diff = end_color - start_color
+
+        blended = start_color + color_diff * theta[..., None]
+        blended[~anglemask] = 0
+        gradient = blended.astype(np.uint8)
         return Image.fromarray(gradient, mode="RGBA")
 
     @staticmethod
