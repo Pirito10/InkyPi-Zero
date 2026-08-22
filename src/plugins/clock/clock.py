@@ -47,6 +47,19 @@ MONTHS_ES_ABBR = [
     "jul", "ago", "sep", "oct", "nov", "dic"
 ]
 
+
+def draw_letter_spaced_text(draw, text, font, x, y, fill, spacing, align="left"):
+    """PIL has no built-in letter-spacing, so draw each character separately."""
+    widths = [draw.textlength(ch, font=font) for ch in text]
+    total_width = sum(widths) + spacing * (len(text) - 1)
+    if align == "center":
+        x -= total_width / 2
+    elif align == "right":
+        x -= total_width
+    for ch, w in zip(text, widths):
+        draw.text((x, y), ch, font=font, fill=fill, anchor="ls")
+        x += w + spacing
+
 class Clock(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -116,12 +129,12 @@ class Clock(BasePlugin):
         if am_pm:
             margin = round(w * 0.03)
             am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
-            text_draw.text((w - margin, h - margin), am_pm, font=am_pm_font, anchor="rs", fill=primary_color+(255,))
+            draw_letter_spaced_text(text_draw, am_pm, am_pm_font, w - margin, h - margin, primary_color+(255,), round(w * 0.004), align="right")
 
         if date_str:
             date_margin = round(h * 0.06)
             date_font = get_font("Jost", round(w * 0.035), font_weight="bold")
-            text_draw.text((w/2, h - date_margin), date_str, font=date_font, anchor="ms", fill=primary_color+(255,))
+            draw_letter_spaced_text(text_draw, date_str, date_font, w/2, h - date_margin, primary_color+(255,), round(w * 0.004), align="center")
 
         combined = Image.alpha_composite(image, text)
 
