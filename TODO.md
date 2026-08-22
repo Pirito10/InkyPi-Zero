@@ -1,0 +1,27 @@
+# Pendientes
+
+Última actualización: 2026-08-22
+
+## Bloqueante / necesita decisión
+
+- [ ] **Chromium no funciona en la Pi Zero W real.** Confirmado en hardware: `chromium-headless-shell` se instala bien (viene del repo de Raspberry Pi OS), pero casca con `Illegal instruction` (SIGILL) al ejecutarse — la CPU (BCM2835/ARM1176/ARMv6) no tiene NEON, que este build de Chromium necesita. Verificado tanto suelto como en la app real (el plugin `calendar` falla igual en producción).
+  - Afecta a **5 de los 7 plugins mantenidos**: `calendar`, `countdown`, `todo_list`, `weather`, `year_progress` (todos usan `render_image()`/Chromium). Solo `clock` e `image_upload` (renderizan con PIL directamente) funcionan bien.
+  - Sin decidir: buscar un renderizador alternativo, precomputar en otro sitio, aceptar perder esos plugins, u otra opción.
+
+- [ ] **El "negro" del modo 4 grises se ve más claro que el negro 1-bit puro.** Visto en la imagen de arranque (el texto salía en gris claro). Reproducido el pipeline completo en software (dithering + empaquetado real del driver + decodificación) y sale negro sólido correctamente — así que el bug, si lo hay, no está en nuestro código Python. Hipótesis: limitación física del propio modo de 4 grises del panel (la forma de onda para 4 niveles no puede llevar el contraste tan al extremo como una de 2 niveles). **Sin confirmar del todo** — quedó pendiente la prueba directa de comparar el mismo negro sólido en modo 4-grises vs modo 1-bit en el mismo panel.
+  - Añadir una opción en el dashboard (Ajustes → Pantalla) para elegir entre modo B&N puro o escala de grises, para quien prefiera el negro más profundo del 1-bit sobre tener sombras de gris.
+
+- [ ] **Cada actualización de pantalla tarda ~2-3 minutos en la Pi real.** El motivo: el propio `getbuffer_4Gray`/`display_4Gray` de Waveshare es Python puro, píxel a píxel, sobre una CPU de ~700MHz. Sin decidir si merece la pena optimizarlo (por ejemplo con numpy) o si se acepta tal cual para un regalo que se actualiza pocas veces al día.
+
+## Bug concreto, arreglo sencillo
+
+- [ ] **Falta `spidev` en `install/ws-requirements.txt`.** El driver real (`epdconfig.py`) hace `import spidev` pero no está listado como dependencia — el servicio se queda en bucle de reinicio nada más instalar en limpio (`ModuleNotFoundError: No module named 'spidev'`). Arreglado a mano en la Pi de pruebas, falta llevarlo al repo.
+
+## Aplazado, no urgente
+
+- [ ] **Pase de interfaz móvil.** Nunca se ha hecho. Ajustes, Playlists y el dashboard principal ya tienen su diseño definitivo en escritorio — tocaría revisar los tres en móvil.
+- [ ] **Intervalo mínimo de rotación (60s) por debajo de lo que recomienda Waveshare (180s)** para este panel.
+- [ ] **La lista de playlists no se ordena por hora de inicio**, y **no se pueden reordenar los plugins dentro de una playlist** (solo orden de inserción).
+- [ ] **5 plugins de comunidad probados, sin decisión final**: `mini_weather`, `flow_progress`, `simple_calendar`, `today`, `seniorDashboard_allDay`.
+  - `seniorDashboard_allDay` necesita que se le quite otra vez `reboot_manager.py` (hace `sudo reboot` automático si detecta pérdida de red, no se quiere) si se reinstala.
+  - Con el problema de Chromium confirmado, `simple_calendar` (pensado como alternativa sin Chromium al `calendar` incluido) cobra más sentido que antes.
