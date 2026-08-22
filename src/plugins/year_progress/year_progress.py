@@ -6,6 +6,22 @@ import logging
 import pytz
 
 logger = logging.getLogger(__name__)
+
+
+def draw_letter_spaced_text(draw, text, font, x, y, fill, spacing, align="left"):
+    """PIL has no built-in letter-spacing, so draw each character separately."""
+    widths = [draw.textlength(ch, font=font) for ch in text]
+    total_width = sum(widths) + spacing * (len(text) - 1)
+    if align == "center":
+        x -= total_width / 2
+    elif align == "right":
+        x -= total_width
+    for ch, w in zip(text, widths):
+        draw.text((x, y), ch, font=font, fill=fill, anchor="la")
+        x += w + spacing
+    return total_width
+
+
 class YearProgress(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -57,7 +73,8 @@ class YearProgress(BasePlugin):
             draw.text((center_x, y), str(year), font=year_font, fill=text_color, anchor="ma")
             y += year_h + subtitle_gap
 
-            draw.text((center_x, y), "PROGRESO", font=subtitle_font, fill=text_color, anchor="ma")
+            subtitle_letter_spacing = round(unit * 1.6)
+            draw_letter_spaced_text(draw, "PROGRESO", subtitle_font, center_x, y, text_color, subtitle_letter_spacing, align="center")
             y += subtitle_h
 
             bar_top = y
@@ -98,9 +115,8 @@ class YearProgress(BasePlugin):
 
             y = bar_bottom + label_gap
 
-            draw.text((left, y), f"{year_percent}% COMPLETADO", font=label_font, fill=text_color, anchor="la")
-            days_left_text = f"{days_left} DÍAS RESTANTES"
-            days_left_width = draw.textlength(days_left_text, font=label_font)
-            draw.text((right - days_left_width, y), days_left_text, font=label_font, fill=text_color, anchor="la")
+            label_letter_spacing = round(unit * 0.8)
+            draw_letter_spaced_text(draw, f"{year_percent}% COMPLETADO", label_font, left, y, text_color, label_letter_spacing, align="left")
+            draw_letter_spaced_text(draw, f"{days_left} DÍAS RESTANTES", label_font, right, y, text_color, label_letter_spacing, align="right")
 
         return self.render_image_pil(dimensions, settings, draw_content)
