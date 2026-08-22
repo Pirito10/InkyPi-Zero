@@ -1,5 +1,5 @@
 <div class="form-group">
-    <label for="clock-face" class="form-label">Clock Face:</label>
+    <label for="clock-face" class="form-label">Cara del reloj:</label>
 
     <div id="clock-face-selection" class="image-grid">
         {% for face in clock_faces %}
@@ -17,16 +17,31 @@
         </div>
         {% endfor %}
     </div>
-    <input type="hidden" id="selected-clock-face" name="selectedClockFace" value="{{ clock_faces[0].Name }}" />
+    <input type="hidden" id="selected-clock-face" name="selectedClockFace" value="{{ clock_faces[0].name }}" />
 </div>
 <div class="form-group">
     <div class="form-group">
-        <label for="primaryColor" class="form-label">Primary Color:</label>
+        <label for="primaryColor" class="form-label">Color primario:</label>
         <input type="color" name="primaryColor" class="color-picker" value="{{ clock_faces[0].primary_color }}"/>
     </div>
     <div class="form-group">
-        <label for="secondaryColor" class="form-label">Secondary Color:</label>
+        <label for="secondaryColor" class="form-label">Color secundario:</label>
         <input type="color" name="secondaryColor" class="color-picker" value="{{ clock_faces[0].secondary_color }}"/>
+    </div>
+</div>
+<div class="form-group" id="time-format-group" style="display: none;">
+    <label for="timeFormat" class="form-label">Formato de hora:</label>
+    <select id="timeFormat" name="timeFormat" class="form-input">
+        <option value="12h" {% if global_time_format == "12h" %}selected{% endif %}>12 horas (AM/PM)</option>
+        <option value="24h" {% if global_time_format == "24h" %}selected{% endif %}>24 horas</option>
+    </select>
+</div>
+<div class="form-group" id="show-date-group" style="display: none;">
+    <label for="showDate" class="form-label">Mostrar fecha:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showDate" name="showDate" class="toggle-checkbox" value="false"
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showDate" class="toggle-label"></label>
     </div>
 </div>
 
@@ -46,6 +61,11 @@
         document.getElementById('selected-clock-face').value = selectedFaceName;
         document.querySelector("[name=primaryColor]").value = element.dataset.primaryColor;
         document.querySelector("[name=secondaryColor]").value = element.dataset.secondaryColor;
+
+        // The time format (AM/PM) and date only apply to the Digital Clock face
+        const isDigitalClock = selectedFaceName === 'Digital Clock';
+        document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
+        document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
     }
 
     // Default selection for the first clock face or based on plugin_settings
@@ -66,7 +86,11 @@
         // If a valid option is found, select it
         if (selectedOption) {
             selectedOption.classList.add('selected');
-            selectedClockFaceInput.value = selectedOption.getAttribute('data-face-name');
+            const selectedFaceName = selectedOption.getAttribute('data-face-name');
+            selectedClockFaceInput.value = selectedFaceName;
+            const isDigitalClock = selectedFaceName === 'Digital Clock';
+            document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
+            document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
         }
 
         if (pluginSettings.primaryColor) {
@@ -75,5 +99,9 @@
         if (pluginSettings.secondaryColor) {
             document.querySelector("[name=secondaryColor]").value = pluginSettings.secondaryColor;
         }
+        if (pluginSettings.timeFormat) {
+            document.getElementById('timeFormat').value = pluginSettings.timeFormat;
+        }
+        document.getElementById('showDate').checked = pluginSettings.showDate === 'true';
     });
 </script>

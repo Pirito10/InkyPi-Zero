@@ -42,6 +42,7 @@ def plugin_page(plugin_id):
         try:
             plugin = get_plugin_instance(plugin_config)
             template_params = plugin.generate_settings_template()
+            template_params["global_time_format"] = device_config.get_config("time_format", default="12h")
 
             # retrieve plugin instance from the query parameters if updating existing plugin instance
             plugin_instance_name = request.args.get('instance')

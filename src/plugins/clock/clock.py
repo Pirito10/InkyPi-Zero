@@ -1,8 +1,6 @@
-import os
-from utils.app_utils import resolve_path, get_font
+from utils.app_utils import get_font
 from plugins.base_plugin.base_plugin import BasePlugin
-from PIL import Image, ImageColor, ImageDraw, ImageFont
-from io import BytesIO
+from PIL import Image, ImageColor, ImageDraw
 import logging
 import numpy as np
 import math
@@ -41,6 +39,25 @@ CLOCK_FACES = [
 DEFAULT_TIMEZONE = "US/Eastern"
 DEFAULT_CLOCK_FACE = "Gradient Clock"
 
+WEEKDAYS_ES = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+MONTHS_ES_ABBR = [
+    "ene", "feb", "mar", "abr", "may", "jun",
+    "jul", "ago", "sep", "oct", "nov", "dic"
+]
+
+
+def draw_letter_spaced_text(draw, text, font, x, y, fill, spacing, align="left"):
+    """PIL has no built-in letter-spacing, so draw each character separately."""
+    widths = [draw.textlength(ch, font=font) for ch in text]
+    total_width = sum(widths) + spacing * (len(text) - 1)
+    if align == "center":
+        x -= total_width / 2
+    elif align == "right":
+        x -= total_width
+    for ch, w in zip(text, widths):
+        draw.text((x, y), ch, font=font, fill=fill, anchor="ls")
+        x += w + spacing
+
 class Clock(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -62,24 +79,39 @@ class Clock(BasePlugin):
         tz = pytz.timezone(timezone_name)
         current_time = datetime.now(tz)
 
+        time_format = settings.get('timeFormat') or device_config.get_config("time_format", default="12h")
+
+        date_str = None
+        if settings.get('showDate') == 'true':
+            date_str = f"{WEEKDAYS_ES[current_time.weekday()]}, {current_time.day} {MONTHS_ES_ABBR[current_time.month - 1]}".upper()
+
         img = None
         try:
             if clock_face == "Gradient Clock":
                 img = self.draw_conic_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Digital Clock":
-                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color)
+                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format, date_str=date_str)
             elif clock_face == "Divided Clock":
                 img = self.draw_divided_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Word Clock":
                 img = self.draw_word_clock(dimensions, current_time, primary_color, secondary_color)
         except Exception as e:
             logger.error(f"Failed to draw clock image: {str(e)}")
-            raise RuntimeError("Failed to display clock.")
+            raise RuntimeError("No se ha podido mostrar el reloj.")
         return img
     
-    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0)):
+    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h", date_str=None):
         w,h = dimensions
-        time_str = Clock.format_time(time.hour, time.minute, zero_pad = True)
+
+        am_pm = None
+        display_hour = time.hour
+        if time_format == "12h":
+            am_pm = "AM" if time.hour < 12 else "PM"
+            display_hour = time.hour % 12
+            if display_hour == 0:
+                display_hour = 12
+
+        time_str = Clock.format_time(display_hour, time.minute, zero_pad = True)
 
         image = Image.new("RGBA", dimensions, secondary_color+(255,))
         text = Image.new("RGBA", dimensions, (0, 0, 0, 0))
@@ -92,7 +124,17 @@ class Clock(BasePlugin):
         text_draw.text((w/2, h/2), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
         text_draw.text((w/2, h/2), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
 
-        combined = Image.alpha_composite(image, text)    
+        if am_pm:
+            margin = round(w * 0.03)
+            am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+            draw_letter_spaced_text(text_draw, am_pm, am_pm_font, w - margin, h - margin, primary_color+(255,), round(w * 0.004), align="right")
+
+        if date_str:
+            date_margin = round(h * 0.06)
+            date_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+            draw_letter_spaced_text(text_draw, date_str, date_font, w/2, h - date_margin, primary_color+(255,), round(w * 0.004), align="center")
+
+        combined = Image.alpha_composite(image, text)
 
         return combined
         
@@ -224,38 +266,50 @@ class Clock(BasePlugin):
             minute_str = "0" + str(minute_str)
         return f"{hour_str}:{minute_str}"
 
+    _base_theta_cache = {}
+
+    @staticmethod
+    def _base_theta(w, h):
+        # arctan2(x-cx, y-cy) only depends on the canvas size, not on the
+        # clock's current angles, so it can be reused across calls/renders
+        # instead of being recomputed (it is the single costliest step).
+        key = (w, h)
+        theta0 = Clock._base_theta_cache.get(key)
+        if theta0 is None:
+            x, y = np.ogrid[:h, :w]
+            cx, cy = h / 2, w / 2
+            theta0 = np.arctan2(x - cx, y - cy)
+            Clock._base_theta_cache[key] = theta0
+        return theta0
+
     @staticmethod
     def draw_gradient_image(w, h, start_angle, end_angle, start_color, end_color):
         """
         Draw a gradient that starts at start_angle and ends at end_angle, using RGBA colors.
         Angles are interpreted for a clock face (0 at 12 o'clock, increasing clockwise).
         """
-        x,y = np.ogrid[:h,:w]
-        cx,cy = h/2, w/2
-
         start_angle = -start_angle
         end_angle = -end_angle
 
-        theta = (np.arctan2(x-cx,y-cy) - start_angle)  % (2*np.pi)
+        theta = (Clock._base_theta(w, h) - start_angle) % (2*np.pi)
 
         angle_range = ((end_angle-start_angle) % (2 * np.pi))
         if angle_range == 0:
             angle_range = 2*np.pi  # Special case: full circle gradient
 
         anglemask = theta <= angle_range
-        theta = theta / angle_range  # Normalize to [0, 1] within range
+        theta = (theta / angle_range).astype(np.float32)  # Normalize to [0, 1] within range
 
-        # Interpolate colors between start and end within the mask
-        gradient = np.zeros((h, w, 4), dtype=np.uint8)
-        start_color = Clock.pad_color(start_color)
-        end_color = Clock.pad_color(end_color)
-        for c in range(4):  # Iterate through RGBA channels
-            gradient[..., c] = (
-                start_color[c] * (1 - theta) + end_color[c] * (theta)
-            ).astype(np.uint8)
-        
-        # Fill with the specified solid color
-        gradient[~anglemask] = (0, 0, 0, 0)
+        # Interpolate colors between start and end within the mask, blending
+        # all 4 RGBA channels in a single broadcasted operation instead of
+        # looping over channels in Python.
+        start_color = np.array(Clock.pad_color(start_color), dtype=np.float32)
+        end_color = np.array(Clock.pad_color(end_color), dtype=np.float32)
+        color_diff = end_color - start_color
+
+        blended = start_color + color_diff * theta[..., None]
+        blended[~anglemask] = 0
+        gradient = blended.astype(np.uint8)
         return Image.fromarray(gradient, mode="RGBA")
 
     @staticmethod
