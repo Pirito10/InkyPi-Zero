@@ -84,7 +84,7 @@ class YearProgress(BasePlugin):
                     dx += dot_spacing
                 dy += dot_spacing
 
-            bar_radius = max(2, round(unit * 1))
+            bar_radius = round(bar_height / 3)
             mask = Image.new("L", (box_width, bar_height), 0)
             ImageDraw.Draw(mask).rounded_rectangle((0, 0, box_width, bar_height), radius=bar_radius, fill=255)
             image.paste(bar_img, (round(left), round(bar_top)), mask)
