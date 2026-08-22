@@ -6,7 +6,7 @@
 
 - [ ] **Chromium no funciona en la Pi Zero W real.** Confirmado en hardware: `chromium-headless-shell` se instala bien (viene del repo de Raspberry Pi OS), pero casca con `Illegal instruction` (SIGILL) al ejecutarse — la CPU (BCM2835/ARM1176/ARMv6) no tiene NEON, que este build de Chromium necesita. Verificado tanto suelto como en la app real (el plugin `calendar` falla igual en producción).
   - Afecta a **5 de los 7 plugins mantenidos**: `calendar`, `countdown`, `todo_list`, `weather`, `year_progress` (todos usan `render_image()`/Chromium). Solo `clock` e `image_upload` (renderizan con PIL directamente) funcionan bien.
-  - Sin decidir: buscar un renderizador alternativo, precomputar en otro sitio, aceptar perder esos plugins, u otra opción.
+  - Solución elegida: reescribir cada plugin afectado para que renderice con PIL directamente, en vez de HTML/CSS/Chromium. `countdown` ya está hecho (rama `feature/countdown-plugin`), con un helper reutilizable (`render_image_pil` en `base_plugin.py`) que aplica marco/márgenes/fondo/color de texto sin navegador. Quedan `calendar` (el más complejo, rejilla de mes con eventos), `todo_list`, `weather` (gráfica horaria) y `year_progress`.
 
 - [ ] **El "negro" del modo 4 grises se ve más claro que el negro 1-bit puro.** Visto en la imagen de arranque (el texto salía en gris claro). Reproducido el pipeline completo en software (dithering + empaquetado real del driver + decodificación) y sale negro sólido correctamente — así que el bug, si lo hay, no está en nuestro código Python. Hipótesis: limitación física del propio modo de 4 grises del panel (la forma de onda para 4 niveles no puede llevar el contraste tan al extremo como una de 2 niveles). **Sin confirmar del todo** — quedó pendiente la prueba directa de comparar el mismo negro sólido en modo 4-grises vs modo 1-bit en el mismo panel.
   - Añadir una opción en el dashboard (Ajustes → Pantalla) para elegir entre modo B&N puro o escala de grises, para quien prefiera el negro más profundo del 1-bit sobre tener sombras de gris.
@@ -16,6 +16,10 @@
 ## Bug concreto, arreglo sencillo
 
 - [ ] **Falta `spidev` en `install/ws-requirements.txt`.** El driver real (`epdconfig.py`) hace `import spidev` pero no está listado como dependencia — el servicio se queda en bucle de reinicio nada más instalar en limpio (`ModuleNotFoundError: No module named 'spidev'`). Arreglado a mano en la Pi de pruebas, falta llevarlo al repo.
+
+## Ajustes a código compartido (aplazados a su propia pasada)
+
+- [ ] **`get_font()` (en `utils/app_utils.py`) no cachea las fuentes** — cada llamada vuelve a leer y parsear el `.ttf` del disco. Es una función compartida por todos los plugins (`countdown`, `calendar`, `weather`, la imagen de arranque...), así que un `@lru_cache` ahí beneficiaría a todos a la vez. Fácil y de bajo riesgo, pero se deja para una pasada dedicada a cosas compartidas, no mezclado con el trabajo de un plugin concreto.
 
 ## Aplazado, no urgente
 
