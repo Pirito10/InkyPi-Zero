@@ -56,7 +56,7 @@ class YearProgress(BasePlugin):
             draw.text((center_x, y), str(year), font=year_font, fill=text_color, anchor="ma")
             y += year_h + subtitle_gap
 
-            draw.text((center_x, y), "PROGRESS", font=subtitle_font, fill=text_color, anchor="ma")
+            draw.text((center_x, y), "PROGRESO", font=subtitle_font, fill=text_color, anchor="ma")
             y += subtitle_h
 
             bar_top = y
@@ -76,8 +76,8 @@ class YearProgress(BasePlugin):
                 dy += dot_spacing
             y = bar_bottom + label_gap
 
-            draw.text((left, y), f"{year_percent}% DONE", font=label_font, fill=text_color, anchor="la")
-            days_left_text = f"{days_left} DAYS LEFT"
+            draw.text((left, y), f"{year_percent}% COMPLETADO", font=label_font, fill=text_color, anchor="la")
+            days_left_text = f"{days_left} DÍAS RESTANTES"
             days_left_width = draw.textlength(days_left_text, font=label_font)
             draw.text((right - days_left_width, y), days_left_text, font=label_font, fill=text_color, anchor="la")
 
