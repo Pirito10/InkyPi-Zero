@@ -30,7 +30,7 @@ class Countdown(BasePlugin):
         countdown_date = tz.localize(countdown_date)
 
         day_count = (countdown_date.date() - current_time.date()).days
-        label = "Days Left" if day_count > 0 else "Days Passed"
+        label = "Days Left" if day_count >= 0 else "Days Passed"
 
         template_params = {
             "title": title,
