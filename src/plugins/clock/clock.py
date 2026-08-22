@@ -62,12 +62,14 @@ class Clock(BasePlugin):
         tz = pytz.timezone(timezone_name)
         current_time = datetime.now(tz)
 
+        time_format = settings.get('timeFormat') or device_config.get_config("time_format", default="12h")
+
         img = None
         try:
             if clock_face == "Gradient Clock":
                 img = self.draw_conic_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Digital Clock":
-                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color)
+                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format)
             elif clock_face == "Divided Clock":
                 img = self.draw_divided_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Word Clock":
@@ -77,9 +79,18 @@ class Clock(BasePlugin):
             raise RuntimeError("No se ha podido mostrar el reloj.")
         return img
     
-    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0)):
+    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h"):
         w,h = dimensions
-        time_str = Clock.format_time(time.hour, time.minute, zero_pad = True)
+
+        am_pm = None
+        display_hour = time.hour
+        if time_format == "12h":
+            am_pm = "AM" if time.hour < 12 else "PM"
+            display_hour = time.hour % 12
+            if display_hour == 0:
+                display_hour = 12
+
+        time_str = Clock.format_time(display_hour, time.minute, zero_pad = True)
 
         image = Image.new("RGBA", dimensions, secondary_color+(255,))
         text = Image.new("RGBA", dimensions, (0, 0, 0, 0))
@@ -92,7 +103,12 @@ class Clock(BasePlugin):
         text_draw.text((w/2, h/2), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
         text_draw.text((w/2, h/2), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
 
-        combined = Image.alpha_composite(image, text)    
+        if am_pm:
+            margin = round(w * 0.03)
+            am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+            text_draw.text((w - margin, h - margin), am_pm, font=am_pm_font, anchor="rs", fill=primary_color+(255,))
+
+        combined = Image.alpha_composite(image, text)
 
         return combined
         
