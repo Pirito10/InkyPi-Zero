@@ -148,14 +148,16 @@ class Clock(BasePlugin):
         # caption below it, laid out bottom-up so either can appear alone.
         footer_font = get_font("Jost", round(w * 0.035), font_weight="bold")
         letter_spacing = round(w * 0.004)
-        line_height = sum(footer_font.getmetrics())
+        footer_ascent, _ = footer_font.getmetrics()
         gap = round(h * 0.02)
         y = h - round(h * 0.06)
 
         if day_progress:
             percent, remaining_str = day_progress
             draw_letter_spaced_text(text_draw, remaining_str, footer_font, w/2, y, primary_color+(255,), letter_spacing, align="center")
-            y -= line_height + gap
+            # Only the ascent is visible (these labels are all-caps, no descenders),
+            # so use it instead of the full line height to keep the gap even.
+            y -= footer_ascent + gap
 
             bar_width = round(w * 0.45)
             bar_height = round(h * 0.02)
