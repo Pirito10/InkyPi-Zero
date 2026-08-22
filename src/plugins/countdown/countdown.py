@@ -60,8 +60,9 @@ class Countdown(BasePlugin):
                 title_font = get_font("Jost", max(1, round(unit * 11)), font_weight="bold")
                 lines.append((title, title_font, 0))
 
-            subtitle_font = get_font("Jost", max(1, round(unit * 5)))
-            lines.append((date_str, subtitle_font, round(unit * 4)))
+            if settings.get('hideDate') != 'true':
+                subtitle_font = get_font("Jost", max(1, round(unit * 5)))
+                lines.append((date_str, subtitle_font, round(unit * 4)))
 
             count_font = get_font("Jost", max(1, round(unit * 32)))
             lines.append((str(abs(day_count)), count_font, 0))
