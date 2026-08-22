@@ -11,6 +11,16 @@ MONTHS_ES = [
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
 ]
 
+
+def draw_letter_spaced_text(draw, text, font, y, center_x, fill, spacing):
+    """PIL has no built-in letter-spacing, so draw each character separately."""
+    widths = [draw.textlength(ch, font=font) for ch in text]
+    total_width = sum(widths) + spacing * (len(text) - 1)
+    x = center_x - total_width / 2
+    for ch, w in zip(text, widths):
+        draw.text((x, y), ch, font=font, fill=fill, anchor="la")
+        x += w + spacing
+
 class Countdown(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -57,6 +67,7 @@ class Countdown(BasePlugin):
             lines.append((str(abs(day_count)), count_font, 0))
 
             label_font = get_font("Jost", max(1, round(unit * 8)))
+            label_letter_spacing = round(unit * 0.8)
             lines.append((label.upper(), label_font, 0))
 
             heights = [sum(font.getmetrics()) for _, font, _ in lines]
@@ -64,8 +75,11 @@ class Countdown(BasePlugin):
 
             y = top + (box_height - total_height) / 2
             center_x = left + box_width / 2
-            for (text, font, gap_after), h in zip(lines, heights):
-                draw.text((center_x, y), text, font=font, fill=text_color, anchor="ma")
+            for i, ((text, font, gap_after), h) in enumerate(zip(lines, heights)):
+                if i == len(lines) - 1:
+                    draw_letter_spaced_text(draw, text, font, y, center_x, text_color, label_letter_spacing)
+                else:
+                    draw.text((center_x, y), text, font=font, fill=text_color, anchor="ma")
                 y += h + gap_after
 
         return self.render_image_pil(dimensions, settings, draw_content)
