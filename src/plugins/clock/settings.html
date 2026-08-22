@@ -36,6 +36,10 @@
         <option value="24h" {% if global_time_format == "24h" %}selected{% endif %}>24 horas</option>
     </select>
 </div>
+<div class="form-group" id="show-date-group" style="display: none;">
+    <input type="checkbox" id="showDate" name="showDate" value="false" onclick="this.value=this.checked ? 'true' : 'false';">
+    <span>Mostrar fecha</span>
+</div>
 
 <script>
     function selectClockFace(element) {
@@ -54,8 +58,10 @@
         document.querySelector("[name=primaryColor]").value = element.dataset.primaryColor;
         document.querySelector("[name=secondaryColor]").value = element.dataset.secondaryColor;
 
-        // The time format (AM/PM) only applies to the Digital Clock face
-        document.getElementById('time-format-group').style.display = selectedFaceName === 'Digital Clock' ? '' : 'none';
+        // The time format (AM/PM) and date only apply to the Digital Clock face
+        const isDigitalClock = selectedFaceName === 'Digital Clock';
+        document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
+        document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
     }
 
     // Default selection for the first clock face or based on plugin_settings
@@ -78,7 +84,9 @@
             selectedOption.classList.add('selected');
             const selectedFaceName = selectedOption.getAttribute('data-face-name');
             selectedClockFaceInput.value = selectedFaceName;
-            document.getElementById('time-format-group').style.display = selectedFaceName === 'Digital Clock' ? '' : 'none';
+            const isDigitalClock = selectedFaceName === 'Digital Clock';
+            document.getElementById('time-format-group').style.display = isDigitalClock ? '' : 'none';
+            document.getElementById('show-date-group').style.display = isDigitalClock ? '' : 'none';
         }
 
         if (pluginSettings.primaryColor) {
@@ -90,5 +98,6 @@
         if (pluginSettings.timeFormat) {
             document.getElementById('timeFormat').value = pluginSettings.timeFormat;
         }
+        document.getElementById('showDate').checked = pluginSettings.showDate === 'true';
     });
 </script>

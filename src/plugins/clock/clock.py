@@ -41,6 +41,12 @@ CLOCK_FACES = [
 DEFAULT_TIMEZONE = "US/Eastern"
 DEFAULT_CLOCK_FACE = "Gradient Clock"
 
+WEEKDAYS_ES = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+MONTHS_ES_ABBR = [
+    "ene", "feb", "mar", "abr", "may", "jun",
+    "jul", "ago", "sep", "oct", "nov", "dic"
+]
+
 class Clock(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -64,12 +70,16 @@ class Clock(BasePlugin):
 
         time_format = settings.get('timeFormat') or device_config.get_config("time_format", default="12h")
 
+        date_str = None
+        if settings.get('showDate') == 'true':
+            date_str = f"{WEEKDAYS_ES[current_time.weekday()]}, {current_time.day} {MONTHS_ES_ABBR[current_time.month - 1]}".upper()
+
         img = None
         try:
             if clock_face == "Gradient Clock":
                 img = self.draw_conic_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Digital Clock":
-                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format)
+                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format, date_str=date_str)
             elif clock_face == "Divided Clock":
                 img = self.draw_divided_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Word Clock":
@@ -79,7 +89,7 @@ class Clock(BasePlugin):
             raise RuntimeError("No se ha podido mostrar el reloj.")
         return img
     
-    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h"):
+    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h", date_str=None):
         w,h = dimensions
 
         am_pm = None
@@ -107,6 +117,11 @@ class Clock(BasePlugin):
             margin = round(w * 0.03)
             am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
             text_draw.text((w - margin, h - margin), am_pm, font=am_pm_font, anchor="rs", fill=primary_color+(255,))
+
+        if date_str:
+            date_margin = round(h * 0.06)
+            date_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+            text_draw.text((w/2, h - date_margin), date_str, font=date_font, anchor="ms", fill=primary_color+(255,))
 
         combined = Image.alpha_composite(image, text)
 
