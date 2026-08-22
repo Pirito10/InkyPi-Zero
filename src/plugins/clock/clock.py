@@ -135,9 +135,34 @@ class Clock(BasePlugin):
         fnt = get_font("DS-Digital", font_size)
         text_draw = ImageDraw.Draw(text)
 
+        footer_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+        letter_spacing = round(w * 0.004)
+        footer_ascent, _ = footer_font.getmetrics()
+        gap = round(h * 0.02)
+        bar_height = round(h * 0.02)
+
+        footer_height = 0
+        if day_progress:
+            footer_height += footer_ascent + gap + bar_height
+        if date_str:
+            footer_height += footer_ascent + (gap if day_progress else 0)
+
+        # DS-Digital's own ascent/descent metrics don't match its actual ink,
+        # so measure the drawn glyphs directly to center the whole composition
+        # (digits + optional footer) instead of just the digits on their own.
+        digit_left, digit_top, digit_right, digit_bottom = text_draw.textbbox((w/2, h/2), "00:00", font=fnt, anchor="mm")
+        digit_height = digit_bottom - digit_top
+        digit_anchor_offset = (digit_top + digit_bottom) / 2 - h/2
+
+        footer_gap = round(h * 0.04) if footer_height else 0
+        total_height = digit_height + footer_gap + footer_height
+        content_top = (h - total_height) / 2
+
+        digit_center_y = content_top + digit_height / 2 - digit_anchor_offset
+
         # time text
-        text_draw.text((w/2, h/2), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
-        text_draw.text((w/2, h/2), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
+        text_draw.text((w/2, digit_center_y), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
+        text_draw.text((w/2, digit_center_y), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
 
         if am_pm:
             margin = round(w * 0.03)
@@ -146,11 +171,7 @@ class Clock(BasePlugin):
 
         # Footer stack: date, then the day progress bar with its remaining-time
         # caption below it, laid out bottom-up so either can appear alone.
-        footer_font = get_font("Jost", round(w * 0.035), font_weight="bold")
-        letter_spacing = round(w * 0.004)
-        footer_ascent, _ = footer_font.getmetrics()
-        gap = round(h * 0.02)
-        y = h - round(h * 0.06)
+        y = content_top + digit_height + footer_gap + footer_height
 
         if day_progress:
             percent, remaining_str = day_progress
@@ -160,7 +181,6 @@ class Clock(BasePlugin):
             y -= footer_ascent + gap
 
             bar_width = round(w * 0.45)
-            bar_height = round(h * 0.02)
             bar_left = round(w/2 - bar_width/2)
             bar_top = round(y - bar_height)
             bar_radius = round(bar_height / 2)
