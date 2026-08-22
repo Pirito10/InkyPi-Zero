@@ -49,7 +49,7 @@ class Countdown(BasePlugin):
         label = "Días restantes" if day_count >= 0 else "Días transcurridos"
         date_str = f"{countdown_date.day} de {MONTHS_ES[countdown_date.month - 1]} de {countdown_date.year}"
 
-        def draw_content(draw, content_box, text_color):
+        def draw_content(image, draw, content_box, text_color):
             left, top, right, bottom = content_box
             box_width = right - left
             box_height = bottom - top

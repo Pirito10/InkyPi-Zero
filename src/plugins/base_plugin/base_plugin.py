@@ -110,9 +110,11 @@ class BasePlugin:
         directly instead of rendering HTML/CSS through a browser. Applies
         the same Style options (frame, margin, background, text color) that
         render/plugin.html applies for the browser-rendered plugins, then
-        calls draw_content(draw, content_box, text_color) to draw the
+        calls draw_content(image, draw, content_box, text_color) to draw the
         plugin-specific content, where content_box = (left, top, right,
         bottom) is the drawable area inside the frame/margins/padding.
+        image is passed alongside draw so plugins can composite (e.g.
+        image.paste with a mask) rather than only draw primitives.
         """
         width, height = dimensions
         text_color = settings.get("textColor") or "#000000"
@@ -151,6 +153,6 @@ class BasePlugin:
         padding = round(width * 0.015)
         content_box = (l + padding, t + padding, r - padding, b - padding)
 
-        draw_content(draw, content_box, text_color)
+        draw_content(image, draw, content_box, text_color)
 
         return image

@@ -1,6 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
 from datetime import datetime
+from PIL import Image, ImageDraw
 import logging
 import pytz
 
@@ -31,7 +32,7 @@ class YearProgress(BasePlugin):
         year_percent = round((elapsed_days / total_days) * 100)
         days_left = round(days_left)
 
-        def draw_content(draw, content_box, text_color):
+        def draw_content(image, draw, content_box, text_color):
             left, top, right, bottom = content_box
             box_width = right - left
             box_height = bottom - top
@@ -61,19 +62,40 @@ class YearProgress(BasePlugin):
 
             bar_top = y
             bar_bottom = y + bar_height
+
+            # Draw the bar's contents (fill + dots) onto a separate canvas,
+            # then clip it with a rounded-rectangle mask so only the two
+            # outer corners on each end are rounded, with a square seam
+            # between the fill and the dots.
+            bar_img = Image.new("RGB", (box_width, bar_height), "white")
+            bar_draw = ImageDraw.Draw(bar_img)
+
             fill_width = round(box_width * year_percent / 100)
             if fill_width > 0:
-                draw.rectangle((left, bar_top, left + fill_width, bar_bottom), fill=text_color)
+                bar_draw.rectangle((0, 0, fill_width, bar_height), fill=text_color)
 
             dot_spacing = max(3, round(unit * 0.6))
             dot_radius = max(1, round(dot_spacing * 0.2))
-            dy = bar_top + dot_spacing / 2
-            while dy < bar_bottom:
-                dx = left + fill_width + dot_spacing / 2
-                while dx < right:
-                    draw.ellipse((dx - dot_radius, dy - dot_radius, dx + dot_radius, dy + dot_radius), fill=text_color)
+            dy = dot_spacing / 2
+            while dy < bar_height:
+                dx = fill_width + dot_spacing / 2
+                while dx < box_width:
+                    bar_draw.ellipse((dx - dot_radius, dy - dot_radius, dx + dot_radius, dy + dot_radius), fill=text_color)
                     dx += dot_spacing
                 dy += dot_spacing
+
+            bar_radius = max(2, round(unit * 1))
+            mask = Image.new("L", (box_width, bar_height), 0)
+            ImageDraw.Draw(mask).rounded_rectangle((0, 0, box_width, bar_height), radius=bar_radius, fill=255)
+            image.paste(bar_img, (round(left), round(bar_top)), mask)
+
+            # Month tick marks, straddling the top/bottom edge of the bar
+            tick_extend = max(2, round(unit * 1))
+            for month in range(1, 12):
+                tick_x = left + round(box_width * month / 12)
+                draw.line([(tick_x, bar_top - tick_extend), (tick_x, bar_top + tick_extend)], fill=text_color, width=1)
+                draw.line([(tick_x, bar_bottom - tick_extend), (tick_x, bar_bottom + tick_extend)], fill=text_color, width=1)
+
             y = bar_bottom + label_gap
 
             draw.text((left, y), f"{year_percent}% COMPLETADO", font=label_font, fill=text_color, anchor="la")
