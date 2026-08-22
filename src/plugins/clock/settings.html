@@ -37,8 +37,12 @@
     </select>
 </div>
 <div class="form-group" id="show-date-group" style="display: none;">
-    <input type="checkbox" id="showDate" name="showDate" value="false" onclick="this.value=this.checked ? 'true' : 'false';">
-    <span>Mostrar fecha</span>
+    <label for="showDate" class="form-label">Mostrar fecha:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showDate" name="showDate" class="toggle-checkbox" value="false"
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showDate" class="toggle-label"></label>
+    </div>
 </div>
 
 <script>
