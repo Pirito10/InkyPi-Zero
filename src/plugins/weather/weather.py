@@ -197,6 +197,7 @@ class Weather(BasePlugin):
     def draw_simple_weather(self, image, draw, box, text_color, data, forecast_days):
         left, top, right, bottom = box
         width = right - left
+
         gap = round(width * 0.03)
         now_w = round(width * 0.34)
 
@@ -208,7 +209,6 @@ class Weather(BasePlugin):
         width = right - left
         height = bottom - top
         center_x = left + width / 2
-        pad = round(width * 0.06)
 
         draw.rounded_rectangle((left, top, right, bottom), radius=round(min(width, height) * 0.06), fill=SIMPLE_CARD_BG)
 
@@ -217,14 +217,23 @@ class Weather(BasePlugin):
         unit_font = get_font("Jost", max(1, round(width * 0.14)))
         hl_font = get_font("Jost", max(1, round(width * 0.13)), font_weight="bold")
 
-        y = top + pad
-        draw.text((center_x, y), "AHORA", font=label_font, fill=text_color, anchor="ma")
-        y += sum(label_font.getmetrics()) + round(height * 0.02)
-
+        label_h = sum(label_font.getmetrics())
         icon_size = round(width * 0.4)
+        temp_h = sum(temp_font.getmetrics())
+        hl_h = sum(hl_font.getmetrics())
+        gap1 = round(height * 0.02)
+        gap2 = round(height * 0.01)
+        gap3 = round(height * 0.025)
+
+        total_h = label_h + gap1 + icon_size + gap2 + temp_h + gap3 + hl_h
+        y = top + (height - total_h) / 2
+
+        draw.text((center_x, y), "AHORA", font=label_font, fill=text_color, anchor="ma")
+        y += label_h + gap1
+
         icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
         image.paste(icon_img, (round(center_x - icon_size / 2), round(y)), icon_img)
-        y += icon_size + round(height * 0.01)
+        y += icon_size + gap2
 
         temp_text = data['current_temperature']
         unit_text = data['temperature_unit']
@@ -233,7 +242,7 @@ class Weather(BasePlugin):
         x = center_x - (temp_w + unit_w) / 2
         draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
         draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
-        y += sum(temp_font.getmetrics()) + round(height * 0.025)
+        y += temp_h + gap3
 
         today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
         high_text = f"{today_forecast['high']}°"
@@ -241,7 +250,6 @@ class Weather(BasePlugin):
         triangle_size = round(width * 0.06)
         hl_gap = round(width * 0.02)
         hl_w = self.high_low_width(draw, high_text, low_text, hl_font, triangle_size, hl_gap)
-        hl_h = sum(hl_font.getmetrics())
         self.draw_high_low(draw, center_x - hl_w / 2, y + hl_h / 2, high_text, low_text, hl_font, triangle_size, hl_gap)
 
     def draw_simple_forecast_list(self, image, draw, box, text_color, forecast):

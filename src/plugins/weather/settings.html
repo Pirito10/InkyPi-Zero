@@ -68,8 +68,11 @@
     </div>
 
     <div class="form-group">
-        <input type="checkbox" id="displayForecast" name="displayForecast" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
-        <span>Previsión</span>
+        <span id="forecast-toggle-group">
+            <input type="checkbox" id="displayForecast" name="displayForecast" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
+            <span>Previsión</span>
+        </span>
+        <span id="forecast-label-simple" style="display: none;">Previsión:</span>
         <select id="forecastDays" name="forecastDays" class="form-input">
             <option value=3>3</option>
             <option value=5>5</option>
@@ -102,6 +105,8 @@
     function toggleDependentGroups() {
         const isSimple = document.getElementById('mode').value === 'simple';
         document.getElementById('advanced-mode-group').style.display = isSimple ? 'none' : '';
+        document.getElementById('forecast-toggle-group').style.display = isSimple ? 'none' : '';
+        document.getElementById('forecast-label-simple').style.display = isSimple ? '' : 'none';
         document.getElementById('graph-options-group').style.display =
             document.getElementById('displayGraph').checked ? '' : 'none';
         document.getElementById('forecast-options-group').style.display =
