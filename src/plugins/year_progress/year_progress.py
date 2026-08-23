@@ -22,7 +22,7 @@ def draw_letter_spaced_text(draw, text, font, x, y, fill, spacing, align="left")
     return total_width
 
 
-def draw_dot_bar(draw, x, y, width, height, percent, color, num_dots=24):
+def draw_dot_bar(draw, x, y, width, height, percent, color, num_dots=48):
     """A row of dots, filled up to `percent`, matching the InkyPi-Flow-Progress look."""
     spacing = width / num_dots
     radius = min(height, spacing) * 0.3
