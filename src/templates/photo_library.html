@@ -180,24 +180,24 @@
     {% include 'response_modal.html' %}
 
     <script>
-        function addPhotoToGrid(filename) {
+        function addPhotoToGrid(photo) {
             const emptyState = document.getElementById('empty-state');
             if (emptyState) emptyState.remove();
 
             const grid = document.getElementById('library-grid');
             const div = document.createElement('div');
             div.className = 'library-photo';
-            div.dataset.filename = filename;
+            div.dataset.filename = photo.filename;
 
             const img = document.createElement('img');
-            img.src = `/static/images/saved/${encodeURIComponent(filename)}`;
-            img.alt = filename;
+            img.src = photo.url;
+            img.alt = photo.filename;
             img.loading = 'lazy';
             img.decoding = 'async';
             div.appendChild(img);
 
-            div.appendChild(createExpandButton(img.src, filename));
-            div.appendChild(createDeleteButton(filename));
+            div.appendChild(createExpandButton(photo.url, photo.filename));
+            div.appendChild(createDeleteButton(photo.filename));
             grid.appendChild(div);
         }
 

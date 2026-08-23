@@ -6,28 +6,34 @@
         gap: 10px;
     }
 
-    .photo-picker-grid {
+    .photo-picker-grid,
+    .library-modal-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
         gap: 10px;
         margin-top: 10px;
     }
 
-    .photo-picker-item {
+    .photo-picker-item,
+    .library-modal-item {
         position: relative;
         border-radius: 8px;
         overflow: hidden;
         aspect-ratio: 1 / 1;
-        cursor: pointer;
         border: 2px solid transparent;
         background: var(--bg-secondary, #f5f5f5);
+    }
+
+    .photo-picker-item {
+        cursor: pointer;
     }
 
     .photo-picker-item.selected {
         border-color: #007bff;
     }
 
-    .photo-picker-item img {
+    .photo-picker-item img,
+    .library-modal-item img {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -42,27 +48,46 @@
         height: 20px;
     }
 
-    .photo-picker-item .btn-expand {
+    .photo-picker-item .btn-expand,
+    .library-modal-item .btn-expand,
+    .library-modal-item .btn-delete {
         position: absolute;
         top: 6px;
-        right: 6px;
         width: 24px;
         height: 24px;
         border: none;
         border-radius: 6px;
         cursor: pointer;
-        background: rgba(0, 0, 0, 0.55);
-        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .photo-picker-item .btn-expand:hover {
+    .photo-picker-item .btn-expand,
+    .library-modal-item .btn-expand {
+        left: 6px;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+    }
+
+    .photo-picker-item .btn-expand:hover,
+    .library-modal-item .btn-expand:hover {
         background: rgba(0, 0, 0, 0.75);
     }
 
-    .photo-picker-empty {
+    .library-modal-item .btn-delete {
+        right: 6px;
+        background: rgba(229, 57, 53, 0.9);
+        color: white;
+        font-size: 16px;
+    }
+
+    .library-modal-item .btn-delete:hover {
+        background: #C62828;
+    }
+
+    .photo-picker-empty,
+    .library-modal-empty {
         color: var(--text-secondary, #666);
         font-size: 0.9rem;
         margin-top: 10px;
@@ -89,6 +114,29 @@
         color: var(--text-secondary, #666);
         font-size: 0.9rem;
         margin-left: auto;
+    }
+
+    .library-modal-content {
+        max-width: 700px;
+    }
+
+    .btn-add {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: 2px dashed var(--border-color, #ddd);
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--text-secondary, #666);
+        font-size: 14px;
+        margin-top: 15px;
+    }
+
+    .btn-add:hover {
+        border-color: var(--accent-primary, #1abc9c);
+        color: var(--accent-primary, #1abc9c);
     }
 </style>
 
@@ -126,7 +174,7 @@
 <div class="form-group">
     <div class="photo-picker-header">
         <label class="form-label">Fotos que rotan:</label>
-        <a href="/photo-library" class="action-button compact">Gestionar biblioteca</a>
+        <button type="button" class="action-button compact" onclick="openLibraryModal()">Gestionar biblioteca</button>
     </div>
     <div id="photoPickerGrid" class="photo-picker-grid"></div>
     <div id="photoPickerEmpty" class="photo-picker-empty" style="display: none;">
@@ -136,6 +184,25 @@
         <button type="button" class="link-button" id="selectAllPhotos">Seleccionar todas</button>
         <button type="button" class="link-button" id="selectNonePhotos">Deseleccionar todas</button>
         <span id="photoPickerCount" class="photo-picker-count"></span>
+    </div>
+</div>
+
+<!-- Photo Library Modal -->
+<div id="libraryModal" class="modal">
+    <div class="modal-content library-modal-content">
+        <span class="close-button" onclick="closeModal('libraryModal')">×</span>
+        <h2>Biblioteca de fotos</h2>
+        <div class="separator"></div>
+
+        <div id="libraryModalGrid" class="library-modal-grid"></div>
+        <div id="libraryModalEmpty" class="library-modal-empty" style="display: none;">
+            Todavía no hay fotos en la biblioteca.
+        </div>
+
+        <input type="file" id="libraryModalUpload" accept="image/*" multiple style="display: none;">
+        <button type="button" class="btn-add" onclick="document.getElementById('libraryModalUpload').click()">
+            <span>+</span> Subir fotos
+        </button>
     </div>
 </div>
 
@@ -169,6 +236,62 @@
         document.body.appendChild(overlay);
     }
 
+    function createPickerItem(photo, isSelected) {
+        const item = document.createElement('div');
+        item.className = 'photo-picker-item' + (isSelected ? ' selected' : '');
+        item.dataset.path = photo.path;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'imageFiles[]';
+        checkbox.value = photo.path;
+        checkbox.checked = isSelected;
+        item.appendChild(checkbox);
+
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.alt = photo.filename;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        item.appendChild(img);
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'btn-expand';
+        expandButton.title = 'Ver grande';
+        expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+        expandButton.addEventListener('click', event => {
+            event.stopPropagation();
+            openLightbox(photo.url, photo.filename);
+        });
+        item.appendChild(expandButton);
+
+        checkbox.addEventListener('click', event => event.stopPropagation());
+        checkbox.addEventListener('change', () => {
+            item.classList.toggle('selected', checkbox.checked);
+            updatePhotoPickerCount();
+        });
+        item.addEventListener('click', () => {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
+
+        return item;
+    }
+
+    function addPickerItem(photo) {
+        document.getElementById('photoPickerEmpty').style.display = 'none';
+        document.getElementById('photoPickerToolbar').style.display = 'flex';
+        document.getElementById('photoPickerGrid').appendChild(createPickerItem(photo, false));
+        updatePhotoPickerCount();
+    }
+
+    function removePickerItem(path) {
+        const item = document.querySelector(`#photoPickerGrid .photo-picker-item[data-path="${CSS.escape(path)}"]`);
+        if (item) item.remove();
+        updatePhotoPickerCount();
+    }
+
     async function loadPhotoPicker() {
         const grid = document.getElementById('photoPickerGrid');
         const emptyState = document.getElementById('photoPickerEmpty');
@@ -186,47 +309,7 @@
             }
 
             photos.forEach(photo => {
-                const isSelected = selectedPaths.has(photo.path);
-
-                const item = document.createElement('div');
-                item.className = 'photo-picker-item' + (isSelected ? ' selected' : '');
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'imageFiles[]';
-                checkbox.value = photo.path;
-                checkbox.checked = isSelected;
-                item.appendChild(checkbox);
-
-                const img = document.createElement('img');
-                img.src = photo.url;
-                img.alt = photo.filename;
-                img.loading = 'lazy';
-                img.decoding = 'async';
-                item.appendChild(img);
-
-                const expandButton = document.createElement('button');
-                expandButton.type = 'button';
-                expandButton.className = 'btn-expand';
-                expandButton.title = 'Ver grande';
-                expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-                expandButton.addEventListener('click', event => {
-                    event.stopPropagation();
-                    openLightbox(photo.url, photo.filename);
-                });
-                item.appendChild(expandButton);
-
-                checkbox.addEventListener('click', event => event.stopPropagation());
-                checkbox.addEventListener('change', () => {
-                    item.classList.toggle('selected', checkbox.checked);
-                    updatePhotoPickerCount();
-                });
-                item.addEventListener('click', () => {
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.dispatchEvent(new Event('change'));
-                });
-
-                grid.appendChild(item);
+                grid.appendChild(createPickerItem(photo, selectedPaths.has(photo.path)));
             });
 
             toolbar.style.display = 'flex';
@@ -248,6 +331,117 @@
             console.error('Error loading photo library:', error);
         }
     }
+
+    function createLibraryModalItem(photo) {
+        const item = document.createElement('div');
+        item.className = 'library-modal-item';
+        item.dataset.path = photo.path;
+
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.alt = photo.filename;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        item.appendChild(img);
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'btn-expand';
+        expandButton.title = 'Ver grande';
+        expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+        expandButton.addEventListener('click', () => openLightbox(photo.url, photo.filename));
+        item.appendChild(expandButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn-delete';
+        deleteButton.title = 'Borrar';
+        deleteButton.textContent = '×';
+        deleteButton.addEventListener('click', () => deleteLibraryPhoto(photo, item));
+        item.appendChild(deleteButton);
+
+        return item;
+    }
+
+    async function loadLibraryModalGrid() {
+        const grid = document.getElementById('libraryModalGrid');
+        const emptyState = document.getElementById('libraryModalEmpty');
+        grid.innerHTML = '';
+
+        try {
+            const response = await fetch('/photo-library/list');
+            const result = await response.json();
+            const photos = result.photos || [];
+
+            emptyState.style.display = photos.length === 0 ? 'block' : 'none';
+            photos.forEach(photo => grid.appendChild(createLibraryModalItem(photo)));
+        } catch (error) {
+            console.error('Error loading photo library:', error);
+        }
+    }
+
+    function openLibraryModal() {
+        openModal('libraryModal');
+        loadLibraryModalGrid();
+    }
+
+    async function deleteLibraryPhoto(photo, item) {
+        if (!confirm(`¿Borrar "${photo.filename}" de la biblioteca?`)) return;
+
+        try {
+            const response = await fetch('/photo-library/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: photo.filename })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                item.remove();
+                removePickerItem(photo.path);
+                if (!document.querySelector('#libraryModalGrid .library-modal-item')) {
+                    document.getElementById('libraryModalEmpty').style.display = 'block';
+                }
+            } else {
+                showResponseModal('failure', result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            showResponseModal('failure', 'Error al borrar la foto');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('libraryModalUpload').addEventListener('change', async event => {
+            const input = event.target;
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            files.forEach(file => formData.append('photos[]', file));
+
+            try {
+                const response = await fetch('/photo-library/upload', { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('libraryModalEmpty').style.display = 'none';
+                    const grid = document.getElementById('libraryModalGrid');
+                    result.saved.forEach(photo => {
+                        grid.appendChild(createLibraryModalItem(photo));
+                        addPickerItem(photo);
+                    });
+                } else {
+                    showResponseModal('failure', result.error);
+                }
+            } catch (error) {
+                console.error('Error uploading photos:', error);
+                showResponseModal('failure', 'Error al subir las fotos');
+            } finally {
+                input.value = '';
+            }
+        });
+    });
 
     // Block saving with no photos selected, since generate_image() would
     // otherwise fail silently at the next scheduled refresh.

@@ -47,6 +47,16 @@ def build_photo_usage_map():
     return usage_map
 
 
+def photo_info(file_path, used_by=None):
+    return {
+        "filename": os.path.basename(file_path),
+        "path": file_path,
+        "url": f"/static/images/saved/{quote(os.path.basename(file_path))}",
+        "mtime": os.path.getmtime(file_path),
+        "used_by": used_by or []
+    }
+
+
 def list_library_photos():
     library_dir = get_library_dir()
     usage_map = build_photo_usage_map()
@@ -56,13 +66,7 @@ def list_library_photos():
         if extension not in ALLOWED_EXTENSIONS:
             continue
         file_path = os.path.join(library_dir, file_name)
-        photos.append({
-            "filename": file_name,
-            "path": file_path,
-            "url": f"/static/images/saved/{quote(file_name)}",
-            "mtime": os.path.getmtime(file_path),
-            "used_by": usage_map.get(file_path, [])
-        })
+        photos.append(photo_info(file_path, usage_map.get(file_path)))
     photos.sort(key=lambda p: p["mtime"], reverse=True)
     return photos
 
@@ -106,7 +110,7 @@ def photo_library_upload():
         else:
             file.save(file_path)
 
-        saved.append(file_name)
+        saved.append(photo_info(file_path))
 
     return jsonify({"success": True, "saved": saved})
 
