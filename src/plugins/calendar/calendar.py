@@ -430,7 +430,12 @@ class Calendar(BasePlugin):
                 ev_end = datetime.fromisoformat(event["end"]) if event.get("end") else ev_start + timedelta(hours=1)
 
                 start_frac = max(0, min(1, (ev_start.hour + ev_start.minute / 60 - start_hour) / num_hours))
-                end_frac = max(0, min(1, (ev_end.hour + ev_end.minute / 60 - start_hour) / num_hours))
+                if ev_end.date() > ev_start.date():
+                    # Spans past midnight: clip to the bottom of today's column
+                    # instead of wrapping to a small hour value on the same day.
+                    end_frac = 1
+                else:
+                    end_frac = max(0, min(1, (ev_end.hour + ev_end.minute / 60 - start_hour) / num_hours))
                 if end_frac <= start_frac:
                     continue
 
