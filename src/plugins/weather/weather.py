@@ -1,6 +1,6 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
-from PIL import Image, ImageDraw
+from PIL import Image
 import requests
 import logging
 from datetime import datetime, timedelta, date
