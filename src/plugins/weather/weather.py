@@ -182,13 +182,15 @@ class Weather(BasePlugin):
         temp_center_x = left + icon_col_w + temp_col_w / 2
         temp_font = get_font("Jost", max(1, round(height * 0.42)))
         unit_font = get_font("Jost", max(1, round(height * 0.17)))
+        description_font = get_font("Jost", max(1, round(height * 0.12)), font_weight="bold")
         feels_font = get_font("Jost", max(1, round(height * 0.11)))
         minmax_font = get_font("Jost", max(1, round(height * 0.13)))
 
         temp_h = sum(temp_font.getmetrics())
+        description_h = sum(description_font.getmetrics())
         feels_h = sum(feels_font.getmetrics())
         minmax_h = sum(minmax_font.getmetrics())
-        block_h = temp_h + feels_h + minmax_h
+        block_h = temp_h + description_h + feels_h + minmax_h
         y = top + (height - block_h) / 2
 
         temp_text = data['current_temperature']
@@ -199,6 +201,9 @@ class Weather(BasePlugin):
         draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
         draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
         y += temp_h
+
+        draw.text((temp_center_x, y), data['current_description'], font=description_font, fill=text_color, anchor="ma")
+        y += description_h
 
         draw.text((temp_center_x, y), f"Sensación {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
         y += feels_h
@@ -422,6 +427,7 @@ class Weather(BasePlugin):
         data = {
             "current_date": f"{WEEKDAYS_ES_LONG[dt.weekday()]}, {dt.day} de {MONTHS_ES[dt.month - 1]}",
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
+            "current_description": self.map_weather_code_to_description(weather_code),
             "current_temperature": str(round(current.get("temperature", 0))),
             "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)))),
             "temperature_unit": TEMPERATURE_UNIT,
@@ -484,6 +490,43 @@ class Weather(BasePlugin):
                 icon = "10n"      # Rain night
 
         return icon
+
+    def map_weather_code_to_description(self, weather_code):
+        if weather_code in [0]:   # Clear sky
+            return "Cielo despejado"
+        elif weather_code in [1]: # Mainly clear
+            return "Mayormente despejado"
+        elif weather_code in [2]: # Partly cloudy
+            return "Parcialmente nublado"
+        elif weather_code in [3]: # Overcast
+            return "Nublado"
+        elif weather_code in [51, 61, 80]: # Drizzle, showers, rain: Light
+            return "Lluvia ligera"
+        elif weather_code in [53, 63, 81]: # Drizzle, showers, rain: Moderate
+            return "Lluvia moderada"
+        elif weather_code in [55, 65, 82]: # Drizzle, showers, rain: Heavy
+            return "Lluvia intensa"
+        elif weather_code in [45]: # Fog
+            return "Niebla"
+        elif weather_code in [48]: # Icy fog
+            return "Niebla helada"
+        elif weather_code in [56, 66]: # Light freezing drizzle
+            return "Llovizna helada ligera"
+        elif weather_code in [57, 67]: # Freezing drizzle
+            return "Llovizna helada"
+        elif weather_code in [71, 85]: # Snow fall: Slight
+            return "Nieve ligera"
+        elif weather_code in [73]:     # Snow fall: Moderate
+            return "Nieve moderada"
+        elif weather_code in [75, 86]: # Snow fall: Heavy
+            return "Nieve intensa"
+        elif weather_code in [77]:     # Snow grain
+            return "Granos de nieve"
+        elif weather_code in [95]: # Thunderstorm
+            return "Tormenta"
+        elif weather_code in [96, 99]: # Thunderstorm with slight and heavy hail
+            return "Tormenta con granizo"
+        return "Cielo despejado"
 
     def get_moon_phase_icon_path(self, phase_name: str, lat: float) -> str:
         """Determines the path to the moon icon, inverting it if the location is in the Southern Hemisphere."""
