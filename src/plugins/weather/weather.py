@@ -173,24 +173,27 @@ class Weather(BasePlugin):
             icon_col_w = round(width * 0.35)
             temp_col_w = width - icon_col_w
 
-        icon_size = round(min(icon_col_w, height) * 0.95)
+        description_font = get_font("Jost", max(1, round(height * 0.12)), font_weight="bold")
+        description_h = sum(description_font.getmetrics())
+
+        icon_size = round(min(icon_col_w, height - description_h) * 0.9)
+        icon_center_x = left + icon_col_w / 2
+        icon_x = round(icon_center_x - icon_size / 2)
+        icon_y = round(top + (height - description_h - icon_size) / 2)
         icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
-        icon_x = round(left + (icon_col_w - icon_size) / 2)
-        icon_y = round(top + (height - icon_size) / 2)
         image.paste(icon_img, (icon_x, icon_y), icon_img)
+        draw.text((icon_center_x, icon_y + icon_size), data['current_description'], font=description_font, fill=text_color, anchor="ma")
 
         temp_center_x = left + icon_col_w + temp_col_w / 2
         temp_font = get_font("Jost", max(1, round(height * 0.42)))
         unit_font = get_font("Jost", max(1, round(height * 0.17)))
-        description_font = get_font("Jost", max(1, round(height * 0.12)), font_weight="bold")
         feels_font = get_font("Jost", max(1, round(height * 0.11)))
         minmax_font = get_font("Jost", max(1, round(height * 0.13)))
 
         temp_h = sum(temp_font.getmetrics())
-        description_h = sum(description_font.getmetrics())
         feels_h = sum(feels_font.getmetrics())
         minmax_h = sum(minmax_font.getmetrics())
-        block_h = temp_h + description_h + feels_h + minmax_h
+        block_h = temp_h + feels_h + minmax_h
         y = top + (height - block_h) / 2
 
         temp_text = data['current_temperature']
@@ -201,9 +204,6 @@ class Weather(BasePlugin):
         draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
         draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
         y += temp_h
-
-        draw.text((temp_center_x, y), data['current_description'], font=description_font, fill=text_color, anchor="ma")
-        y += description_h
 
         draw.text((temp_center_x, y), f"Sensación {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
         y += feels_h
