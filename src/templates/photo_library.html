@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de fotos</title>
+    <script>
+        (function() {
+            const theme = localStorage.getItem('inkypi-theme') ||
+                         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/main.css') }}">
+    <script src="{{ url_for('static', filename='scripts/dark_mode.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/response_modal.js') }}"></script>
+    <style>
+        .library-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .library-photo {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 1 / 1;
+            background: var(--bg-secondary, #f5f5f5);
+        }
+
+        .library-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .library-photo .btn-delete,
+        .library-photo .btn-expand {
+            position: absolute;
+            top: 6px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .library-photo .btn-delete {
+            right: 6px;
+            background: rgba(229, 57, 53, 0.9);
+            color: white;
+        }
+
+        .library-photo .btn-delete:hover {
+            background: #C62828;
+        }
+
+        .library-photo .btn-expand {
+            left: 6px;
+            background: rgba(0, 0, 0, 0.55);
+            color: white;
+        }
+
+        .library-photo .btn-expand:hover {
+            background: rgba(0, 0, 0, 0.75);
+        }
+
+        .library-photo .usage-badge {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            font-size: 11px;
+            padding: 4px 6px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn-add {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: 2px dashed var(--border-color, #ddd);
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-secondary, #666);
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-top: 15px;
+        }
+
+        .btn-add:hover {
+            border-color: var(--accent-primary, #1abc9c);
+            color: var(--accent-primary, #1abc9c);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary, #666);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <!-- Back Button -->
+        <button onclick="history.back()" class="back-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back
+        </button>
+
+        <!-- Header -->
+        <div class="app-header">
+            <div class="header-content">
+                <div class="title-container">
+                    <span style="font-size: 28px; margin-right: 10px;">🖼️</span>
+                    <h1 class="app-title">Biblioteca de fotos</h1>
+                </div>
+            </div>
+        </div>
+        <div class="separator"></div>
+
+        <div class="library-container">
+            <div id="library-grid" class="library-grid">
+                {% for photo in photos %}
+                <div class="library-photo" data-filename="{{ photo.filename }}">
+                    <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy" decoding="async">
+                    <button type="button" class="btn-expand" data-url="{{ photo.url }}" data-filename="{{ photo.filename }}" title="Ver grande">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </button>
+                    <button type="button" class="btn-delete" data-filename="{{ photo.filename }}" title="Borrar">×</button>
+                    {% if photo.used_by %}
+                    <span class="usage-badge" title="{{ photo.used_by | join(', ') }}">En uso: {{ photo.used_by | join(', ') }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not photos %}
+            <div class="empty-state" id="empty-state">
+                <div class="empty-state-icon">🖼️</div>
+                <p>Todavía no hay fotos en la biblioteca.</p>
+                <p>Súbelas aquí y luego elige cuáles rotan desde el plugin "Subir fotos".</p>
+            </div>
+            {% endif %}
+
+            <input type="file" id="photoUpload" accept="image/*" multiple style="display: none;" onchange="uploadPhotos()">
+            <button type="button" class="btn-add" onclick="document.getElementById('photoUpload').click()">
+                <span>+</span> Subir fotos
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    {% include 'response_modal.html' %}
+
+    <script>
+        function addPhotoToGrid(photo) {
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) emptyState.remove();
+
+            const grid = document.getElementById('library-grid');
+            const div = document.createElement('div');
+            div.className = 'library-photo';
+            div.dataset.filename = photo.filename;
+
+            const img = document.createElement('img');
+            img.src = photo.url;
+            img.alt = photo.filename;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            div.appendChild(img);
+
+            div.appendChild(createExpandButton(photo.url, photo.filename));
+            div.appendChild(createDeleteButton(photo.filename));
+            grid.appendChild(div);
+        }
+
+        function createDeleteButton(filename) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-delete';
+            button.title = 'Borrar';
+            button.textContent = '×';
+            button.addEventListener('click', () => deletePhoto(filename));
+            return button;
+        }
+
+        function createExpandButton(url, filename) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-expand';
+            button.title = 'Ver grande';
+            button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+            button.addEventListener('click', () => openLightbox(url, filename));
+            return button;
+        }
+
+        function openLightbox(url, alt) {
+            const overlay = document.createElement('div');
+            overlay.className = 'image-modal-overlay';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = alt;
+            overlay.appendChild(img);
+
+            function close() {
+                overlay.remove();
+                document.removeEventListener('keydown', onKeyDown);
+            }
+            function onKeyDown(event) {
+                if (event.key === 'Escape') close();
+            }
+
+            overlay.addEventListener('click', close);
+            document.addEventListener('keydown', onKeyDown);
+            document.body.appendChild(overlay);
+        }
+
+        // Wire up buttons rendered server-side on page load
+        document.querySelectorAll('.btn-delete[data-filename]').forEach(button => {
+            button.addEventListener('click', () => deletePhoto(button.dataset.filename));
+        });
+        document.querySelectorAll('.btn-expand[data-filename]').forEach(button => {
+            button.addEventListener('click', () => openLightbox(button.dataset.url, button.dataset.filename));
+        });
+
+        async function uploadPhotos() {
+            const input = document.getElementById('photoUpload');
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            files.forEach(file => formData.append('photos[]', file));
+
+            try {
+                const response = await fetch('{{ url_for("photo_library.photo_library_upload") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    result.saved.forEach(addPhotoToGrid);
+                    showResponseModal('success', `${result.saved.length} foto(s) subida(s)`);
+                } else {
+                    showResponseModal('failure', result.error);
+                }
+            } catch (error) {
+                console.error('Error uploading:', error);
+                showResponseModal('failure', 'Error al subir las fotos');
+            } finally {
+                input.value = '';
+            }
+        }
+
+        async function deletePhoto(filename) {
+            if (!confirm(`¿Borrar "${filename}" de la biblioteca?`)) return;
+
+            try {
+                const response = await fetch('{{ url_for("photo_library.photo_library_delete") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    const el = document.querySelector(`.library-photo[data-filename="${filename}"]`);
+                    if (el) el.remove();
+                } else {
+                    showResponseModal('failure', result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting:', error);
+                showResponseModal('failure', 'Error al borrar la foto');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -2,7 +2,6 @@ from plugins.base_plugin.base_plugin import BasePlugin
 from PIL import Image, ImageOps, ImageColor
 import logging
 import random
-import os
 
 from utils.image_utils import pad_image_blur
 
@@ -21,7 +20,7 @@ class ImageUpload(BasePlugin):
             resize: Whether to auto-resize (set False if manual padding needed)
         """
         if not image_locations:
-            raise RuntimeError("No images provided.")
+            raise RuntimeError("No se han seleccionado fotos.")
 
         try:
             # Use adaptive loader for memory-efficient processing
@@ -31,7 +30,7 @@ class ImageUpload(BasePlugin):
             return image
         except Exception as e:
             logger.error(f"Failed to read image file: {str(e)}")
-            raise RuntimeError("Failed to read image file.")
+            raise RuntimeError("No se pudo leer el archivo de imagen.")
 
 
     def generate_image(self, settings, device_config) -> Image:
@@ -43,7 +42,7 @@ class ImageUpload(BasePlugin):
 
         if not image_locations:
             logger.error("No images uploaded")
-            raise RuntimeError("No images provided.")
+            raise RuntimeError("No se han seleccionado fotos.")
 
         logger.debug(f"Total uploaded images: {len(image_locations)}")
         logger.debug(f"Current index: {img_index}")
@@ -92,17 +91,3 @@ class ImageUpload(BasePlugin):
 
         logger.info("=== Image Upload Plugin: Image generation complete ===")
         return image
-
-    def cleanup(self, settings):
-        """Delete all uploaded image files associated with this plugin instance."""
-        image_locations = settings.get("imageFiles[]", [])
-        if not image_locations:
-            return
-
-        for image_path in image_locations:
-            if os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                    logger.info(f"Deleted uploaded image: {image_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete uploaded image {image_path}: {e}")

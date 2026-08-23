@@ -1,15 +1,170 @@
+<style>
+    .photo-picker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .photo-picker-grid,
+    .library-modal-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .photo-picker-item,
+    .library-modal-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        border: 2px solid transparent;
+        background: var(--bg-secondary, #f5f5f5);
+    }
+
+    .photo-picker-item {
+        cursor: pointer;
+    }
+
+    .photo-picker-item.selected {
+        border-color: var(--accent-primary, #1abc9c);
+    }
+
+    .photo-picker-item img,
+    .library-modal-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .photo-picker-item input[type="checkbox"] {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .photo-picker-item .btn-expand,
+    .library-modal-item .btn-expand,
+    .library-modal-item .btn-delete {
+        position: absolute;
+        top: 6px;
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .photo-picker-item .btn-expand {
+        right: 6px;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+    }
+
+    .library-modal-item .btn-expand {
+        left: 6px;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+    }
+
+    .photo-picker-item .btn-expand:hover,
+    .library-modal-item .btn-expand:hover {
+        background: rgba(0, 0, 0, 0.75);
+    }
+
+    .library-modal-item .btn-delete {
+        right: 6px;
+        background: rgba(229, 57, 53, 0.9);
+        color: white;
+        font-size: 16px;
+    }
+
+    .library-modal-item .btn-delete:hover {
+        background: #C62828;
+    }
+
+    .photo-picker-empty,
+    .library-modal-empty {
+        color: var(--text-secondary, #666);
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+
+    .photo-picker-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+    }
+
+    .photo-picker-toolbar .link-button {
+        background: none;
+        border: 1px solid var(--accent-primary, #1abc9c);
+        border-radius: 20px;
+        padding: 6px 14px;
+        color: var(--accent-primary, #1abc9c);
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .photo-picker-toolbar .link-button:hover {
+        background: var(--accent-primary, #1abc9c);
+        color: #fff;
+    }
+
+    .photo-picker-count {
+        color: var(--text-secondary, #666);
+        font-size: 0.9rem;
+        margin-left: auto;
+    }
+
+    .library-modal-content {
+        max-width: 700px;
+    }
+
+    .btn-add {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: 2px dashed var(--border-color, #ddd);
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--text-secondary, #666);
+        font-size: 14px;
+        margin-top: 15px;
+    }
+
+    .btn-add:hover {
+        border-color: var(--accent-primary, #1abc9c);
+        color: var(--accent-primary, #1abc9c);
+    }
+</style>
+
 <div class="form-group">
     <div class="form-group">
-        <label for="padImage" class="form-label">Scale to Fit:</label>
+        <label for="padImage" class="form-label">Ajustar al marco:</label>
         <div class="toggle-container">
-            <input type="checkbox" id="padImage" name="padImage" class="toggle-checkbox" value="false">
+            <input type="checkbox" id="padImage" name="padImage" class="toggle-checkbox" value="true"
+                onclick="toggleBackgroundGroup(this.checked)">
             <label for="padImage" class="toggle-label"></label>
         </div>
-        <!-- Hidden input ensures 'true' is always sent when unchecked -->
-        <input type="hidden" name="padImage" value="true">
+        <!-- Hidden input ensures 'false' is always sent when unchecked (unchecked checkboxes submit nothing) -->
+        <input type="hidden" name="padImage" value="false">
     </div>
     <div class="form-group">
-        <label for="randomize" class="form-label">Random Order:</label>
+        <label for="randomize" class="form-label">Orden aleatorio:</label>
         <div class="toggle-container">
             <input type="checkbox" id="randomize" name="randomize" class="toggle-checkbox" value="false"
                 onclick="this.value = this.checked ? 'true' : 'false'">
@@ -17,116 +172,327 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="form-label" for="backgroundOption">Background:</label>
-        <div class="form-group">
-            <input type="radio" id="backgroundOption" name="backgroundOption" value="blur">
-            <label>Blur</label>
-            <input type="radio" id="backgroundOption" name="backgroundOption" value="color">
-            <label>Color</label>
-            <input type="color" id="backgroundColor" name="backgroundColor" value="#ffffff" class="color-picker"/>
+    <div class="form-group" id="backgroundGroup">
+        <label for="useColorBackground" class="form-label">Fondo de color:</label>
+        <div class="toggle-container">
+            <input type="checkbox" id="useColorBackground" class="toggle-checkbox"
+                onclick="setBackgroundOption(this.checked)">
+            <label for="useColorBackground" class="toggle-label"></label>
         </div>
+        <input type="hidden" id="backgroundOption" name="backgroundOption" value="blur">
+        <input type="color" id="backgroundColor" name="backgroundColor" value="#ffffff" class="color-picker" style="display: none;"/>
     </div>
 </div>
 
 <div class="form-group">
-    <label for="imageUpload" class="form-input file-upload-label">Choose Image</label>
-    <input type="file" clear-on-submit id="imageUpload" name="imageFiles[]" accept="image/*" multiple
-           class="file-upload-input" onchange="addFiles()">
+    <div class="photo-picker-header">
+        <label class="form-label">Fotos que rotan:</label>
+        <button type="button" class="action-button compact" onclick="openLibraryModal()">Gestionar biblioteca</button>
+    </div>
+    <div id="photoPickerGrid" class="photo-picker-grid"></div>
+    <div id="photoPickerEmpty" class="photo-picker-empty" style="display: none;">
+        No hay fotos en la biblioteca todavía. Súbelas desde "Gestionar biblioteca".
+    </div>
+    <div id="photoPickerToolbar" class="photo-picker-toolbar" style="display: none;">
+        <button type="button" class="link-button" id="selectAllPhotos">Seleccionar todas</button>
+        <button type="button" class="link-button" id="selectNonePhotos">Deseleccionar todas</button>
+        <span id="photoPickerCount" class="photo-picker-count"></span>
+    </div>
 </div>
 
-<!-- Display uploaded & existing file names -->
-<div class="form-group">
-    <div id="fileNames" class="file-name-list"></div>
-</div>
+<!-- Photo Library Modal -->
+<div id="libraryModal" class="modal">
+    <div class="modal-content library-modal-content">
+        <span class="close-button" onclick="closeModal('libraryModal')">×</span>
+        <h2>Biblioteca de fotos</h2>
+        <div class="separator"></div>
 
-<!-- Hidden input fields to store existing file data -->
-<div id="hiddenFileInputs"></div>
+        <div id="libraryModalGrid" class="library-modal-grid"></div>
+        <div id="libraryModalEmpty" class="library-modal-empty" style="display: none;">
+            Todavía no hay fotos en la biblioteca.
+        </div>
+
+        <input type="file" id="libraryModalUpload" accept="image/*" multiple style="display: none;">
+        <button type="button" class="btn-add" onclick="document.getElementById('libraryModalUpload').click()">
+            <span>+</span> Subir fotos
+        </button>
+    </div>
+</div>
 
 <script>
-    function addFiles() {
-        const fileInput = document.getElementById("imageUpload");
-        const fileNamesDisplay = document.getElementById("fileNames");
-        
-        const files = Array.from(fileInput.files);
+    function updatePhotoPickerCount() {
+        const checkboxes = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]');
+        const selected = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]:checked');
+        const countEl = document.getElementById('photoPickerCount');
+        if (countEl) countEl.textContent = `${selected.length} de ${checkboxes.length} seleccionadas`;
+    }
 
-        if (!uploadedFiles["imageFiles[]"]) {
-            uploadedFiles["imageFiles[]"] = [];
+    function openLightbox(url, alt) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-modal-overlay';
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = alt;
+        overlay.appendChild(img);
+
+        function close() {
+            overlay.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        function onKeyDown(event) {
+            if (event.key === 'Escape') close();
         }
 
-        files.forEach(file => {
-            const fileName = file.name;
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', onKeyDown);
+        document.body.appendChild(overlay);
+    }
 
-            // Prevent duplicate files
-            if (!uploadedFiles["imageFiles[]"].some(f => f.name === fileName)) {
-                uploadedFiles["imageFiles[]"].push(file);
+    function createPickerItem(photo, isSelected) {
+        const item = document.createElement('div');
+        item.className = 'photo-picker-item' + (isSelected ? ' selected' : '');
+        item.dataset.path = photo.path;
 
-                const fileElement = document.createElement("div");
-                fileElement.innerHTML = `
-                    <span id="fileNameText">${fileName}</span>
-                    <button type="button" class="remove-btn" onclick="removeAddedFile('${fileName}')">X</button>
-                `;
-                fileElement.id = `added-${fileName}`;
-                fileElement.classList.add("file-name");
-                fileElement.setAttribute('delete-on-submit', '');
-                fileNamesDisplay.appendChild(fileElement);
-            }
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'imageFiles[]';
+        checkbox.value = photo.path;
+        checkbox.checked = isSelected;
+        item.appendChild(checkbox);
+
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.alt = photo.filename;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        item.appendChild(img);
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'btn-expand';
+        expandButton.title = 'Ver grande';
+        expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+        expandButton.addEventListener('click', event => {
+            event.stopPropagation();
+            openLightbox(photo.url, photo.filename);
+        });
+        item.appendChild(expandButton);
+
+        checkbox.addEventListener('click', event => event.stopPropagation());
+        checkbox.addEventListener('change', () => {
+            item.classList.toggle('selected', checkbox.checked);
+            updatePhotoPickerCount();
+        });
+        item.addEventListener('click', () => {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
         });
 
-        // Clear the input to allow adding the same file again if needed
-        fileInput.value = "";
+        return item;
     }
 
-    function removeAddedFile(fileName) {
-        // Remove the file from uploadedFiles
-        uploadedFiles["imageFiles[]"] = uploadedFiles["imageFiles[]"].filter(f => f.name !== fileName);
-        
-        // Remove the displayed filename
-        document.getElementById(`added-${fileName}`).remove();
+    function addPickerItem(photo) {
+        document.getElementById('photoPickerEmpty').style.display = 'none';
+        document.getElementById('photoPickerToolbar').style.display = 'flex';
+        document.getElementById('photoPickerGrid').appendChild(createPickerItem(photo, false));
+        updatePhotoPickerCount();
     }
 
-    function removeExistingFile(fileName) {
-        document.getElementById(`existing-${fileName}`).remove(); // Remove from display
-        document.getElementById(`hidden-${fileName}`).remove(); // Remove hidden input
+    function removePickerItem(path) {
+        const item = document.querySelector(`#photoPickerGrid .photo-picker-item[data-path="${CSS.escape(path)}"]`);
+        if (item) item.remove();
+        updatePhotoPickerCount();
     }
 
-    // populate form values from plugin settings
-    document.addEventListener('DOMContentLoaded', () => {    
-        const fileNamesDisplay = document.getElementById("fileNames");
-        const hiddenFileInputs = document.getElementById("hiddenFileInputs");
-        let backgroundOption = "blur"
-        if (loadPluginSettings) {
-            document.getElementById('padImage').checked = pluginSettings.padImage == 'false';
-            document.getElementById('randomize').checked = pluginSettings.randomize;
-            document.getElementById('backgroundColor').value = pluginSettings.backgroundColor;
+    async function loadPhotoPicker() {
+        const grid = document.getElementById('photoPickerGrid');
+        const emptyState = document.getElementById('photoPickerEmpty');
+        const toolbar = document.getElementById('photoPickerToolbar');
+        const selectedPaths = new Set(loadPluginSettings ? (pluginSettings['imageFiles[]'] || []) : []);
 
-            const existingFiles = pluginSettings['imageFiles[]'] || []
-            backgroundOption = pluginSettings.backgroundOption || 'blur'
+        try {
+            const response = await fetch('/photo-library/list');
+            const result = await response.json();
+            const photos = result.photos || [];
 
-            // Loop through the existing files and add them to the display and hidden inputs
-            existingFiles.forEach(filePath => {
-                const fileName = filePath.split('/').pop()
-                // Create an element for the file name
-                const fileElement = document.createElement("div");
-                fileElement.innerHTML = `
-                    <span id="fileNameText">${fileName}</span>
-                    <button type="button" class="remove-btn" onclick="removeExistingFile('${fileName}')">X</button>
-                `;
-                fileElement.id = `existing-${fileName}`;
-                fileElement.classList.add("file-name");
-                fileElement.setAttribute('delete-on-submit', '');
-                fileNamesDisplay.appendChild(fileElement);
+            if (photos.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
 
-                // Create a hidden input for the existing file
-                const hiddenInput = document.createElement("input");
-                hiddenInput.type = "hidden";
-                hiddenInput.name = "imageFiles[]";
-                hiddenInput.value = filePath;
-                hiddenInput.id = `hidden-${fileName}`;
-                hiddenInput.setAttribute('delete-on-submit', '');
-                hiddenFileInputs.appendChild(hiddenInput);
+            photos.forEach(photo => {
+                grid.appendChild(createPickerItem(photo, selectedPaths.has(photo.path)));
             });
+
+            toolbar.style.display = 'flex';
+            updatePhotoPickerCount();
+
+            document.getElementById('selectAllPhotos').addEventListener('click', () => {
+                document.querySelectorAll('#photoPickerGrid input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
+            document.getElementById('selectNonePhotos').addEventListener('click', () => {
+                document.querySelectorAll('#photoPickerGrid input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
+        } catch (error) {
+            console.error('Error loading photo library:', error);
         }
-        document.querySelector(`input[name="backgroundOption"][value="${backgroundOption}"]`).checked = true;
+    }
+
+    function createLibraryModalItem(photo) {
+        const item = document.createElement('div');
+        item.className = 'library-modal-item';
+        item.dataset.path = photo.path;
+
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.alt = photo.filename;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        item.appendChild(img);
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'btn-expand';
+        expandButton.title = 'Ver grande';
+        expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+        expandButton.addEventListener('click', () => openLightbox(photo.url, photo.filename));
+        item.appendChild(expandButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn-delete';
+        deleteButton.title = 'Borrar';
+        deleteButton.textContent = '×';
+        deleteButton.addEventListener('click', () => deleteLibraryPhoto(photo, item));
+        item.appendChild(deleteButton);
+
+        return item;
+    }
+
+    async function loadLibraryModalGrid() {
+        const grid = document.getElementById('libraryModalGrid');
+        const emptyState = document.getElementById('libraryModalEmpty');
+        grid.innerHTML = '';
+
+        try {
+            const response = await fetch('/photo-library/list');
+            const result = await response.json();
+            const photos = result.photos || [];
+
+            emptyState.style.display = photos.length === 0 ? 'block' : 'none';
+            photos.forEach(photo => grid.appendChild(createLibraryModalItem(photo)));
+        } catch (error) {
+            console.error('Error loading photo library:', error);
+        }
+    }
+
+    function openLibraryModal() {
+        openModal('libraryModal');
+        loadLibraryModalGrid();
+    }
+
+    async function deleteLibraryPhoto(photo, item) {
+        if (!confirm(`¿Borrar "${photo.filename}" de la biblioteca?`)) return;
+
+        try {
+            const response = await fetch('/photo-library/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: photo.filename })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                item.remove();
+                removePickerItem(photo.path);
+                if (!document.querySelector('#libraryModalGrid .library-modal-item')) {
+                    document.getElementById('libraryModalEmpty').style.display = 'block';
+                }
+            } else {
+                showResponseModal('failure', result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            showResponseModal('failure', 'Error al borrar la foto');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('libraryModalUpload').addEventListener('change', async event => {
+            const input = event.target;
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            files.forEach(file => formData.append('photos[]', file));
+
+            try {
+                const response = await fetch('/photo-library/upload', { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('libraryModalEmpty').style.display = 'none';
+                    const grid = document.getElementById('libraryModalGrid');
+                    result.saved.forEach(photo => {
+                        grid.appendChild(createLibraryModalItem(photo));
+                        addPickerItem(photo);
+                    });
+                } else {
+                    showResponseModal('failure', result.error);
+                }
+            } catch (error) {
+                console.error('Error uploading photos:', error);
+                showResponseModal('failure', 'Error al subir las fotos');
+            } finally {
+                input.value = '';
+            }
+        });
+    });
+
+    // Block saving with no photos selected, since generate_image() would
+    // otherwise fail silently at the next scheduled refresh.
+    document.addEventListener('click', event => {
+        const commitButton = event.target.closest('[onclick*="handleAction("]');
+        if (!commitButton) return;
+
+        const selected = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]:checked');
+        if (selected.length === 0) {
+            event.stopPropagation();
+            event.preventDefault();
+            showResponseModal('failure', 'Selecciona al menos una foto para que rote.');
+        }
+    }, true);
+
+    function setBackgroundOption(useColor) {
+        document.getElementById('backgroundOption').value = useColor ? 'color' : 'blur';
+        document.getElementById('backgroundColor').style.display = useColor ? '' : 'none';
+    }
+
+    function toggleBackgroundGroup(padImageEnabled) {
+        document.getElementById('backgroundGroup').style.display = padImageEnabled ? '' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('backgroundColor').value = (loadPluginSettings && pluginSettings.backgroundColor) || '#ffffff';
+        const useColorBackground = loadPluginSettings && pluginSettings.backgroundOption === 'color';
+        document.getElementById('useColorBackground').checked = useColorBackground;
+        setBackgroundOption(useColorBackground);
+
+        const padImageEnabled = loadPluginSettings ? pluginSettings.padImage == 'true' : true;
+        document.getElementById('padImage').checked = padImageEnabled;
+        toggleBackgroundGroup(padImageEnabled);
+
+        if (loadPluginSettings) {
+            document.getElementById('randomize').checked = pluginSettings.randomize;
+        }
+
+        loadPhotoPicker();
     });
 </script>
