@@ -1,6 +1,6 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
-from datetime import datetime
+from datetime import datetime, timedelta
 from PIL import Image, ImageDraw
 import logging
 import pytz
@@ -20,6 +20,20 @@ def draw_letter_spaced_text(draw, text, font, x, y, fill, spacing, align="left")
         draw.text((x, y), ch, font=font, fill=fill, anchor="la")
         x += w + spacing
     return total_width
+
+
+def draw_dot_bar(draw, x, y, width, height, percent, color, num_dots=24):
+    """A row of dots, filled up to `percent`, matching the InkyPi-Flow-Progress look."""
+    spacing = width / num_dots
+    radius = min(height, spacing) * 0.3
+    filled_dots = round(num_dots * percent / 100)
+    cy = y + height / 2
+    for i in range(num_dots):
+        cx = x + spacing * i + spacing / 2
+        if i < filled_dots:
+            draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=color)
+        else:
+            draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), outline=color, width=1)
 
 
 class YearProgress(BasePlugin):
@@ -47,6 +61,32 @@ class YearProgress(BasePlugin):
         year = current_time.year
         year_percent = round((elapsed_days / total_days) * 100)
         days_left = round(days_left)
+
+        mode = settings.get('mode', 'simple')
+
+        if mode == 'advanced':
+            day_start = tz.localize(datetime(current_time.year, current_time.month, current_time.day))
+            day_end = day_start + timedelta(days=1)
+            day_percent = (current_time - day_start).total_seconds() / (day_end - day_start).total_seconds() * 100
+
+            week_start_date = current_time.date() - timedelta(days=current_time.weekday())
+            week_start = tz.localize(datetime(week_start_date.year, week_start_date.month, week_start_date.day))
+            week_end = week_start + timedelta(days=7)
+            week_percent = (current_time - week_start).total_seconds() / (week_end - week_start).total_seconds() * 100
+
+            month_start = tz.localize(datetime(current_time.year, current_time.month, 1))
+            if current_time.month == 12:
+                month_end = tz.localize(datetime(current_time.year + 1, 1, 1))
+            else:
+                month_end = tz.localize(datetime(current_time.year, current_time.month + 1, 1))
+            month_percent = (current_time - month_start).total_seconds() / (month_end - month_start).total_seconds() * 100
+
+            periods = [
+                ("DÍA", day_percent),
+                ("SEMANA", week_percent),
+                ("MES", month_percent),
+                ("AÑO", year_percent),
+            ]
 
         def draw_content(image, draw, content_box, text_color):
             left, top, right, bottom = content_box
@@ -119,4 +159,34 @@ class YearProgress(BasePlugin):
             draw_letter_spaced_text(draw, f"{year_percent}% COMPLETADO", label_font, left, y, text_color, label_letter_spacing, align="left")
             draw_letter_spaced_text(draw, f"{days_left} DÍAS RESTANTES", label_font, right, y, text_color, label_letter_spacing, align="right")
 
+        def draw_advanced_content(image, draw, content_box, text_color):
+            left, top, right, bottom = content_box
+            box_width = right - left
+            box_height = bottom - top
+            unit = min(box_width, box_height) / 100
+
+            label_font = get_font("Jost", max(1, round(unit * 7)), font_weight="bold")
+            percent_font = get_font("Jost", max(1, round(unit * 7)))
+            label_letter_spacing = round(unit * 0.8)
+
+            label_h = sum(label_font.getmetrics())
+            dots_height = round(unit * 6)
+            label_gap = round(unit * 2)
+            row_gap = round(unit * 8)
+
+            block_height = label_h + label_gap + dots_height
+            total_height = block_height * len(periods) + row_gap * (len(periods) - 1)
+
+            y = top + (box_height - total_height) / 2
+            for label, percent in periods:
+                draw_letter_spaced_text(draw, label, label_font, left, y, text_color, label_letter_spacing, align="left")
+                draw_letter_spaced_text(draw, f"{round(percent)}%", percent_font, right, y, text_color, label_letter_spacing, align="right")
+
+                dots_y = y + label_h + label_gap
+                draw_dot_bar(draw, left, dots_y, box_width, dots_height, percent, text_color)
+
+                y += block_height + row_gap
+
+        if mode == 'advanced':
+            return self.render_image_pil(dimensions, settings, draw_advanced_content)
         return self.render_image_pil(dimensions, settings, draw_content)
