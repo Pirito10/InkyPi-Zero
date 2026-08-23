@@ -1,0 +1,15 @@
+<div class="form-group">
+    <label for="mode" class="form-label">Modo:</label>
+    <select id="mode" name="mode" class="form-input">
+        <option value="simple">Simple</option>
+        <option value="advanced">Avanzado</option>
+    </select>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (pluginSettings.mode) {
+            document.getElementById('mode').value = pluginSettings.mode;
+        }
+    });
+</script>
