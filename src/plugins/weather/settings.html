@@ -100,12 +100,12 @@
 <script>
 
     function toggleDependentGroups() {
-        document.getElementById('advanced-mode-group').style.display =
-            document.getElementById('mode').value === 'simple' ? 'none' : '';
+        const isSimple = document.getElementById('mode').value === 'simple';
+        document.getElementById('advanced-mode-group').style.display = isSimple ? 'none' : '';
         document.getElementById('graph-options-group').style.display =
             document.getElementById('displayGraph').checked ? '' : 'none';
         document.getElementById('forecast-options-group').style.display =
-            document.getElementById('displayForecast').checked ? '' : 'none';
+            (!isSimple && document.getElementById('displayForecast').checked) ? '' : 'none';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
