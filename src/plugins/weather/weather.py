@@ -29,36 +29,16 @@ def get_moon_phase_name(phase_age: float) -> str:
             return phase_name  
     return "newmoon"
 
-UNITS = {
-    "standard": {
-        "temperature": "K",
-        "speed": "m/s",
-        "distance":"km"
-    },
-    "metric": {
-        "temperature": "°C",
-        "speed": "m/s",
-        "distance":"km"
+TEMPERATURE_UNIT = "°C"
+SPEED_UNIT = "m/s"
+DISTANCE_UNIT = "km"
 
-    },
-    "imperial": {
-        "temperature": "°F",
-        "speed": "mph",
-        "distance":"mi"
-    }
-}
-
-WEATHER_URL = "https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={long}&units={units}&exclude=minutely&appid={api_key}"
+WEATHER_URL = "https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={long}&units=metric&exclude=minutely&appid={api_key}"
 AIR_QUALITY_URL = "http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={long}&appid={api_key}"
 GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={long}&limit=1&appid={api_key}"
 
-OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,surface_pressure,visibility&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current=temperature,windspeed,winddirection,is_day,precipitation,weather_code,apparent_temperature&timezone=auto&models=best_match&forecast_days={forecast_days}"
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,surface_pressure,visibility&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current=temperature,windspeed,winddirection,is_day,precipitation,weather_code,apparent_temperature&timezone=auto&models=best_match&forecast_days={forecast_days}&temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm"
 OPEN_METEO_AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={long}&hourly=european_aqi,uv_index,uv_index_clear_sky&timezone=auto"
-OPEN_METEO_UNIT_PARAMS = {
-    "standard": "temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm",  # temperature is converted to Kelvin later
-    "metric":   "temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm",
-    "imperial": "temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch"
-}
 
 class Weather(BasePlugin):
     def generate_settings_template(self):
@@ -77,10 +57,6 @@ class Weather(BasePlugin):
         if not lat or not long:
             raise RuntimeError("Latitude and Longitude are required.")
 
-        units = settings.get('units')
-        if not units or units not in ['metric', 'imperial', 'standard']:
-            raise RuntimeError("Units are required.")
-
         weather_provider = settings.get('weatherProvider', 'OpenWeatherMap')
         title = settings.get('customTitle', '')
 
@@ -93,22 +69,22 @@ class Weather(BasePlugin):
                 api_key = device_config.load_env_key("OPEN_WEATHER_MAP_SECRET")
                 if not api_key:
                     raise RuntimeError("Open Weather Map API Key not configured.")
-                weather_data = self.get_weather_data(api_key, units, lat, long)
+                weather_data = self.get_weather_data(api_key, lat, long)
                 aqi_data = self.get_air_quality(api_key, lat, long)
                 if settings.get('titleSelection', 'location') == 'location':
                     title = self.get_location(api_key, lat, long)
                 if settings.get('weatherTimeZone', 'locationTimeZone') == 'locationTimeZone':
                     logger.info("Using location timezone for OpenWeatherMap data.")
                     wtz = self.parse_timezone(weather_data)
-                    template_params = self.parse_weather_data(weather_data, aqi_data, wtz, units, time_format, lat)
+                    template_params = self.parse_weather_data(weather_data, aqi_data, wtz, time_format, lat)
                 else:
                     logger.info("Using configured timezone for OpenWeatherMap data.")
-                    template_params = self.parse_weather_data(weather_data, aqi_data, tz, units, time_format, lat)
+                    template_params = self.parse_weather_data(weather_data, aqi_data, tz, time_format, lat)
             elif weather_provider == "OpenMeteo":
                 forecast_days = 7
-                weather_data = self.get_open_meteo_data(lat, long, units, forecast_days + 1)
+                weather_data = self.get_open_meteo_data(lat, long, forecast_days + 1)
                 aqi_data = self.get_open_meteo_air_quality(lat, long)
-                template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, units, time_format, lat)
+                template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, time_format, lat)
             else:
                 raise RuntimeError(f"Unknown weather provider: {weather_provider}")
 
@@ -137,7 +113,7 @@ class Weather(BasePlugin):
             raise RuntimeError("Failed to take screenshot, please check logs.")
         return image
 
-    def parse_weather_data(self, weather_data, aqi_data, tz, units, time_format, lat):
+    def parse_weather_data(self, weather_data, aqi_data, tz, time_format, lat):
         current = weather_data.get("current")
         daily_forecast = weather_data.get("daily", [])
         dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
@@ -154,40 +130,36 @@ class Weather(BasePlugin):
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
             "current_temperature": str(round(current.get("temp"))),
             "feels_like": str(round(current.get("feels_like"))),
-            "temperature_unit": UNITS[units]["temperature"],
-            "units": units,
+            "temperature_unit": TEMPERATURE_UNIT,
             "time_format": time_format
         }
         data['forecast'] = self.parse_forecast(weather_data.get('daily'), tz, current_suffix, lat)
-        data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units, time_format)
+        data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, time_format)
 
-        data['hourly_forecast'] = self.parse_hourly(weather_data.get('hourly'), tz, time_format, units, daily_forecast)
+        data['hourly_forecast'] = self.parse_hourly(weather_data.get('hourly'), tz, time_format, daily_forecast)
         return data
 
-    def parse_open_meteo_data(self, weather_data, aqi_data, tz, units, time_format, lat):
+    def parse_open_meteo_data(self, weather_data, aqi_data, tz, time_format, lat):
         current = weather_data.get("current", {})
         daily = weather_data.get('daily', {})
         dt = datetime.fromisoformat(current.get('time')).astimezone(tz) if current.get('time') else datetime.now(tz)
         weather_code = current.get("weather_code", 0)
         is_day = current.get("is_day", 1)
         current_icon = self.map_weather_code_to_icon(weather_code, is_day)
-        
-        temperature_conversion = 273.15 if units == "standard" else 0.
 
         data = {
             "current_date": dt.strftime("%A, %B %d"),
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
-            "current_temperature": str(round(current.get("temperature", 0) + temperature_conversion)),
-            "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)) + temperature_conversion)),
-            "temperature_unit": UNITS[units]["temperature"],
-            "units": units,
+            "current_temperature": str(round(current.get("temperature", 0))),
+            "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)))),
+            "temperature_unit": TEMPERATURE_UNIT,
             "time_format": time_format
         }
 
-        data['forecast'] = self.parse_open_meteo_forecast(weather_data.get('daily', {}), units, tz, is_day, lat)
-        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, units, tz, time_format)
-        
-        data['hourly_forecast'] = self.parse_open_meteo_hourly(weather_data.get('hourly', {}), units, tz, time_format, daily.get('sunrise', []), daily.get('sunset', []))
+        data['forecast'] = self.parse_open_meteo_forecast(weather_data.get('daily', {}), tz, is_day, lat)
+        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, tz, time_format)
+
+        data['hourly_forecast'] = self.parse_open_meteo_hourly(weather_data.get('hourly', {}), tz, time_format, daily.get('sunrise', []), daily.get('sunset', []))
         return data
 
     def map_weather_code_to_icon(self, weather_code, is_day):
@@ -326,7 +298,7 @@ class Weather(BasePlugin):
 
         return forecast
         
-    def parse_open_meteo_forecast(self, daily_data, units, tz, is_day, lat):
+    def parse_open_meteo_forecast(self, daily_data, tz, is_day, lat):
         """
         Parse the daily forecast from Open-Meteo API and calculate moon phase and illumination using the local 'astral' library.
         """
@@ -334,9 +306,6 @@ class Weather(BasePlugin):
         weather_codes = daily_data.get('weathercode', [])
         temp_max = daily_data.get('temperature_2m_max', [])
         temp_min = daily_data.get('temperature_2m_min', [])
-        if units == "standard":
-            temp_max = [T + 273.15 for T in temp_max]
-            temp_min = [T + 273.15 for T in temp_min]
 
         forecast = []
 
@@ -374,7 +343,7 @@ class Weather(BasePlugin):
 
         return forecast
 
-    def parse_hourly(self, hourly_forecast, tz, time_format, units, daily_forecast):
+    def parse_hourly(self, hourly_forecast, tz, time_format, daily_forecast):
         hourly = []
         icon_codes_to_preserve = ["01", "02", "10"]
         
@@ -398,26 +367,20 @@ class Weather(BasePlugin):
             icon_base = raw_icon[:2]
             icon_name = f"{icon_base}{suffix}" if icon_base in icon_codes_to_preserve else f"{icon_base}d"
             
-            if units == "imperial":
-                precip_value = total_precip_mm / 25.4
-            else:
-                precip_value = total_precip_mm 
             hour_forecast = {
                 "time": self.format_time(dt, time_format, hour_only=True),
                 "temperature": int(hour.get("temp")),
                 "precipitation": hour.get("pop"),
-                "rain": round(precip_value, 2),
+                "rain": round(total_precip_mm, 2),
                 "icon": self.get_plugin_dir(f'icons/{icon_name}.png')
             }
             hourly.append(hour_forecast)
         return hourly
 
-    def parse_open_meteo_hourly(self, hourly_data, units, tz, time_format, sunrises, sunsets):
+    def parse_open_meteo_hourly(self, hourly_data, tz, time_format, sunrises, sunsets):
         hourly = []
         times = hourly_data.get('time', [])
         temperatures = hourly_data.get('temperature_2m', [])
-        if units == "standard":
-            temperatures = [temperature + 273.15 for temperature in temperatures]
         precipitation_probabilities = hourly_data.get('precipitation_probability', [])
         rain = hourly_data.get('precipitation', [])
         codes = hourly_data.get('weather_code', [])
@@ -466,7 +429,7 @@ class Weather(BasePlugin):
             hourly.append(hour_forecast)
         return hourly
 
-    def parse_data_points(self, weather, air_quality, tz, units, time_format):
+    def parse_data_points(self, weather, air_quality, tz, time_format):
         data_points = []
         sunrise_epoch = weather.get('current', {}).get("sunrise")
 
@@ -498,7 +461,7 @@ class Weather(BasePlugin):
         data_points.append({
             "label": "Wind",
             "measurement": weather.get('current', {}).get("wind_speed"),
-            "unit": UNITS[units]["speed"],
+            "unit": SPEED_UNIT,
             "icon": self.get_plugin_dir('icons/wind.png'),
             "arrow": wind_arrow
         })
@@ -524,22 +487,15 @@ class Weather(BasePlugin):
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
-        visibility = weather.get('current', {}).get("visibility")
-        if units == "imperial":
-            # convert from m to mi
-            visibility /= 1609.
-            at_max_visibility = visibility >= 6.2
-        else:
-            # convert from m to km
-            visibility /= 1000.
-            at_max_visibility = visibility >= 10
+        visibility = weather.get('current', {}).get("visibility") / 1000.
+        at_max_visibility = visibility >= 10
         visibility_str = f"{visibility:.1f}"
         if at_max_visibility:
             visibility_str = u"\u2265" + visibility_str
         data_points.append({
             "label": "Visibility",
             "measurement": visibility_str,
-            "unit": UNITS[units]["distance"],
+            "unit": DISTANCE_UNIT,
             "icon": self.get_plugin_dir('icons/visibility.png')
         })
 
@@ -553,7 +509,7 @@ class Weather(BasePlugin):
 
         return data_points
 
-    def parse_open_meteo_data_points(self, weather_data, aqi_data, units, tz, time_format):
+    def parse_open_meteo_data_points(self, weather_data, aqi_data, tz, time_format):
         """Parses current data points from Open-Meteo API response."""
         data_points = []
         daily_data = weather_data.get('daily', {})
@@ -592,7 +548,7 @@ class Weather(BasePlugin):
         wind_speed = current_data.get("windspeed", 0)
         wind_deg = current_data.get("winddirection", 0)
         wind_arrow = self.get_wind_arrow(wind_deg)
-        wind_unit = UNITS[units]["speed"]
+        wind_unit = SPEED_UNIT
         data_points.append({
             "label": "Wind", "measurement": wind_speed, "unit": wind_unit,
             "icon": self.get_plugin_dir('icons/wind.png'), "arrow": wind_arrow
@@ -653,12 +609,8 @@ class Weather(BasePlugin):
         current_visibility = "N/A"
         visibility_hourly_times = hourly_data.get('time', [])
         visibility_values = hourly_data.get('visibility', [])
-        if units == "imperial":
-            visibility_conversion = 1/5280.     # ft to mi
-            visibility_max = 6.2                # mi
-        else:
-            visibility_conversion = 0.001       # m to km
-            visibility_max = 10.                # km
+        visibility_conversion = 0.001  # m to km
+        visibility_max = 10.  # km
         for i, time_str in enumerate(visibility_hourly_times):
             try:
                 if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
@@ -672,9 +624,9 @@ class Weather(BasePlugin):
         if at_max_visibility:
             visibility_str = u"\u2265" + visibility_str
         data_points.append({
-            "label": "Visibility", 
-            "measurement": visibility_str, 
-            "unit": UNITS[units]["distance"],
+            "label": "Visibility",
+            "measurement": visibility_str,
+            "unit": DISTANCE_UNIT,
             "icon": self.get_plugin_dir('icons/visibility.png')
         })
 
@@ -719,8 +671,8 @@ class Weather(BasePlugin):
 
         return "↑"
 
-    def get_weather_data(self, api_key, units, lat, long):
-        url = WEATHER_URL.format(lat=lat, long=long, units=units, api_key=api_key)
+    def get_weather_data(self, api_key, lat, long):
+        url = WEATHER_URL.format(lat=lat, long=long, api_key=api_key)
         response = requests.get(url, timeout=30)
         if not 200 <= response.status_code < 300:
             logger.error(f"Failed to retrieve weather data: {response.content}")
@@ -751,9 +703,8 @@ class Weather(BasePlugin):
 
         return location_str
 
-    def get_open_meteo_data(self, lat, long, units, forecast_days):
-        unit_params = OPEN_METEO_UNIT_PARAMS[units]
-        url = OPEN_METEO_FORECAST_URL.format(lat=lat, long=long, forecast_days=forecast_days) + f"&{unit_params}"
+    def get_open_meteo_data(self, lat, long, forecast_days):
+        url = OPEN_METEO_FORECAST_URL.format(lat=lat, long=long, forecast_days=forecast_days)
         response = requests.get(url, timeout=30)
 
         if not 200 <= response.status_code < 300:

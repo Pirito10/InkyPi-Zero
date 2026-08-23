@@ -20,13 +20,6 @@
         <option value="OpenMeteo">Open-Meteo</option>
         <option value="OpenWeatherMap">OpenWeatherMap</option>
     </select>
-
-    <label for="units" class="form-label">Units:</label>
-    <select id="units" name="units" class="form-input">
-        <option value="imperial">Imperial (°F)</option>
-        <option value="metric">Metric (°C)</option>
-        <option value="standard">Standard (K)</option>
-    </select>
 </div>
 
 <div class="form-group" id="titleOptionWrapper">
@@ -203,8 +196,6 @@
             document.getElementById('latitude').value = pluginSettings.latitude;
             document.getElementById('longitude').value = pluginSettings.longitude;
 
-            document.getElementById('units').value = pluginSettings.units;
-
             document.getElementById('displayRefreshTime').checked = pluginSettings.displayRefreshTime;
             document.getElementById('displayRefreshTime').value = pluginSettings.displayRefreshTime;
 
@@ -236,7 +227,6 @@
             document.getElementById('customTitle').value = pluginSettings.customTitle || '';
         } else {
             // set default values
-            document.getElementById('units').value = "imperial";
             document.getElementById('displayRefreshTime').checked = true;
             document.getElementById('displayRefreshTime').value = "true";
             document.getElementById('displayMetrics').checked = true;

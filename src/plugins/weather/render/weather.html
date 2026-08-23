@@ -1,8 +1,6 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<div id="units-container" data-units="{{ units }}"></div>
-
 
 <div class="weather-dashboard">
   {% if plugin_settings.displayRefreshTime == "true" %}
@@ -21,8 +19,8 @@
         <img class="current-icon" src="{{current_day_icon}}" alt="Current Weather Icon">
         <div class="current-weather">
           <div class="current-temp">{{ current_temperature }}<span class="temperature-unit">{{temperature_unit}}</span></div>
-          <div class="feels-like">Feels Like {{ feels_like }}{% if units != "standard" %}°{% endif %}</div>
-          <div class="min-max">{{ forecast[0].high }}{% if units != "standard" %}°{% endif %} / {{ forecast[0].low }}{% if units != "standard" %}°{% endif %}</div>
+          <div class="feels-like">Feels Like {{ feels_like }}°</div>
+          <div class="min-max">{{ forecast[0].high }}° / {{ forecast[0].low }}°</div>
         </div>
     </div>
 
@@ -64,8 +62,8 @@
         <div class="forecast-day-name">{{ day.day }}</div>
         <img class="forecast-icon" src="{{day.icon}}" alt="{{ day.day }} Weather Icon">
         <div class="forecast-temps">
-          <span class="high">{{ day.high }}{% if units != "standard" %}°{% endif %}</span> /
-          <span class="low">{{ day.low }}{% if units != "standard" %}°{% endif %}</span>
+          <span class="high">{{ day.high }}°</span> /
+          <span class="low">{{ day.low }}°</span>
         </div>
         {% if plugin_settings.moonPhase and plugin_settings.moonPhase == "true" %}
         <div class="separator"></div>
@@ -95,10 +93,8 @@
     const rain = [{% for hour in hourly_forecast %}{{ hour.rain or 0 }}{% if not loop.last %}, {% endif %}{% endfor %}];
     const weatherIconsPaths = [{% for hour in hourly_forecast %}"{{ hour.icon | replace('\\', '/') }}"{% if not loop.last %}, {% endif %}{% endfor %}];
 	const iconStep = parseInt("{{ plugin_settings.graphIconStep or 2 }}");
-	const units = document.getElementById('units-container').dataset.units;
-	const isImperial = units === "imperial";
-	const unit = isImperial ? "in" : "mm";
-	const threshold = isImperial ? 0.0035 : 0.09;
+	const unit = "mm";
+	const threshold = 0.09;
 	
     // Find min and max temperatures
     const minTemp = Math.min(...temperatures);
@@ -243,8 +239,8 @@
               },
               autoSkip: false,
               callback: function(value, index, values) {
-                if (index === values.length-1) return (units != "standard") ? maxTemp + "°" : maxTemp;
-                else if (index === 0) return (units != "standard") ? minTemp + "°" : minTemp;
+                if (index === values.length-1) return maxTemp + "°";
+                else if (index === 0) return minTemp + "°";
                 else return '';
               }
             },
