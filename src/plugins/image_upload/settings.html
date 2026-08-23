@@ -1,3 +1,54 @@
+<style>
+    .photo-picker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .photo-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .photo-picker-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        cursor: pointer;
+        border: 2px solid transparent;
+        background: var(--bg-secondary, #f5f5f5);
+    }
+
+    .photo-picker-item.selected {
+        border-color: #007bff;
+    }
+
+    .photo-picker-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .photo-picker-item input[type="checkbox"] {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .photo-picker-empty {
+        color: var(--text-secondary, #666);
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+</style>
+
 <div class="form-group">
     <div class="form-group">
         <label for="padImage" class="form-label">Scale to Fit:</label>
@@ -30,103 +81,69 @@
 </div>
 
 <div class="form-group">
-    <label for="imageUpload" class="form-input file-upload-label">Choose Image</label>
-    <input type="file" clear-on-submit id="imageUpload" name="imageFiles[]" accept="image/*" multiple
-           class="file-upload-input" onchange="addFiles()">
+    <div class="photo-picker-header">
+        <label class="form-label">Fotos que rotan:</label>
+        <a href="/photo-library" target="_blank" class="action-button compact">Gestionar biblioteca</a>
+    </div>
+    <div id="photoPickerGrid" class="photo-picker-grid"></div>
+    <div id="photoPickerEmpty" class="photo-picker-empty" style="display: none;">
+        No hay fotos en la biblioteca todavía. Súbelas desde "Gestionar biblioteca".
+    </div>
 </div>
-
-<!-- Display uploaded & existing file names -->
-<div class="form-group">
-    <div id="fileNames" class="file-name-list"></div>
-</div>
-
-<!-- Hidden input fields to store existing file data -->
-<div id="hiddenFileInputs"></div>
 
 <script>
-    function addFiles() {
-        const fileInput = document.getElementById("imageUpload");
-        const fileNamesDisplay = document.getElementById("fileNames");
-        
-        const files = Array.from(fileInput.files);
+    async function loadPhotoPicker() {
+        const grid = document.getElementById('photoPickerGrid');
+        const emptyState = document.getElementById('photoPickerEmpty');
+        const selectedPaths = new Set(loadPluginSettings ? (pluginSettings['imageFiles[]'] || []) : []);
 
-        if (!uploadedFiles["imageFiles[]"]) {
-            uploadedFiles["imageFiles[]"] = [];
-        }
+        try {
+            const response = await fetch('/photo-library/list');
+            const result = await response.json();
+            const photos = result.photos || [];
 
-        files.forEach(file => {
-            const fileName = file.name;
-
-            // Prevent duplicate files
-            if (!uploadedFiles["imageFiles[]"].some(f => f.name === fileName)) {
-                uploadedFiles["imageFiles[]"].push(file);
-
-                const fileElement = document.createElement("div");
-                fileElement.innerHTML = `
-                    <span id="fileNameText">${fileName}</span>
-                    <button type="button" class="remove-btn" onclick="removeAddedFile('${fileName}')">X</button>
-                `;
-                fileElement.id = `added-${fileName}`;
-                fileElement.classList.add("file-name");
-                fileElement.setAttribute('delete-on-submit', '');
-                fileNamesDisplay.appendChild(fileElement);
+            if (photos.length === 0) {
+                emptyState.style.display = 'block';
+                return;
             }
-        });
 
-        // Clear the input to allow adding the same file again if needed
-        fileInput.value = "";
+            photos.forEach(photo => {
+                const isSelected = selectedPaths.has(photo.path);
+
+                const item = document.createElement('div');
+                item.className = 'photo-picker-item' + (isSelected ? ' selected' : '');
+                item.innerHTML = `
+                    <input type="checkbox" name="imageFiles[]" value="${photo.path}" ${isSelected ? 'checked' : ''}>
+                    <img src="${photo.url}" alt="${photo.filename}">
+                `;
+
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('click', event => event.stopPropagation());
+                checkbox.addEventListener('change', () => {
+                    item.classList.toggle('selected', checkbox.checked);
+                });
+                item.addEventListener('click', () => {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+
+                grid.appendChild(item);
+            });
+        } catch (error) {
+            console.error('Error loading photo library:', error);
+        }
     }
 
-    function removeAddedFile(fileName) {
-        // Remove the file from uploadedFiles
-        uploadedFiles["imageFiles[]"] = uploadedFiles["imageFiles[]"].filter(f => f.name !== fileName);
-        
-        // Remove the displayed filename
-        document.getElementById(`added-${fileName}`).remove();
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('backgroundColor').value = (loadPluginSettings && pluginSettings.backgroundColor) || '#ffffff';
+        const backgroundOption = (loadPluginSettings && pluginSettings.backgroundOption) || 'blur';
+        document.querySelector(`input[name="backgroundOption"][value="${backgroundOption}"]`).checked = true;
 
-    function removeExistingFile(fileName) {
-        document.getElementById(`existing-${fileName}`).remove(); // Remove from display
-        document.getElementById(`hidden-${fileName}`).remove(); // Remove hidden input
-    }
-
-    // populate form values from plugin settings
-    document.addEventListener('DOMContentLoaded', () => {    
-        const fileNamesDisplay = document.getElementById("fileNames");
-        const hiddenFileInputs = document.getElementById("hiddenFileInputs");
-        let backgroundOption = "blur"
         if (loadPluginSettings) {
             document.getElementById('padImage').checked = pluginSettings.padImage == 'false';
             document.getElementById('randomize').checked = pluginSettings.randomize;
-            document.getElementById('backgroundColor').value = pluginSettings.backgroundColor;
-
-            const existingFiles = pluginSettings['imageFiles[]'] || []
-            backgroundOption = pluginSettings.backgroundOption || 'blur'
-
-            // Loop through the existing files and add them to the display and hidden inputs
-            existingFiles.forEach(filePath => {
-                const fileName = filePath.split('/').pop()
-                // Create an element for the file name
-                const fileElement = document.createElement("div");
-                fileElement.innerHTML = `
-                    <span id="fileNameText">${fileName}</span>
-                    <button type="button" class="remove-btn" onclick="removeExistingFile('${fileName}')">X</button>
-                `;
-                fileElement.id = `existing-${fileName}`;
-                fileElement.classList.add("file-name");
-                fileElement.setAttribute('delete-on-submit', '');
-                fileNamesDisplay.appendChild(fileElement);
-
-                // Create a hidden input for the existing file
-                const hiddenInput = document.createElement("input");
-                hiddenInput.type = "hidden";
-                hiddenInput.name = "imageFiles[]";
-                hiddenInput.value = filePath;
-                hiddenInput.id = `hidden-${fileName}`;
-                hiddenInput.setAttribute('delete-on-submit', '');
-                hiddenFileInputs.appendChild(hiddenInput);
-            });
         }
-        document.querySelector(`input[name="backgroundOption"][value="${backgroundOption}"]`).checked = true;
+
+        loadPhotoPicker();
     });
 </script>
