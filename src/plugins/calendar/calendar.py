@@ -223,7 +223,10 @@ class Calendar(BasePlugin):
         today = current_dt.date()
 
         if view == "timeGridDay":
-            days = [today]
+            # A single day is always shown as-is, even if it falls on a
+            # weekend and weekends are otherwise hidden — filtering it out
+            # would leave the view with nothing to display.
+            return [today]
         elif view == "timeGrid":
             days = [today + timedelta(days=i) for i in range(7)]
         elif view == "timeGridWeek":
