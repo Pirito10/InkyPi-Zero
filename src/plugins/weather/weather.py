@@ -1,7 +1,6 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
 from PIL import Image, ImageDraw
-import numpy as np
 import requests
 import logging
 from datetime import datetime, timedelta, date
@@ -294,11 +293,6 @@ class Weather(BasePlugin):
         def y_for_temp(t):
             return plot_bottom - (t - min_temp) / (max_temp - min_temp) * plot_height
 
-        draw.text((left, plot_top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
-        draw.text((left, plot_bottom), f"{min_temp}°", font=label_font, fill=text_color, anchor="ls")
-        draw.text((right, plot_top), "100%", font=label_font, fill=text_color, anchor="ra")
-        draw.text((right, plot_bottom), "0%", font=label_font, fill=text_color, anchor="rs")
-
         # Precipitation probability bars
         bar_color = (26, 111, 176, 200)
         bar_width = max(1, plot_width / n * 0.9)
@@ -311,23 +305,16 @@ class Weather(BasePlugin):
             bar_top_y = plot_bottom - bar_h
             draw.rectangle((x - bar_width / 2, bar_top_y, x + bar_width / 2, plot_bottom), fill=bar_color)
 
-        # Temperature line with a gradient fill underneath
+        # Temperature line (envelope only, no fill, so it doesn't compete
+        # visually with the precipitation bars underneath it)
         points = [(x_for(i), y_for_temp(h['temperature'])) for i, h in enumerate(hourly_forecast)]
-        plot_w_px, plot_h_px = max(1, round(plot_width)), max(1, round(plot_height))
-        gradient = np.zeros((plot_h_px, plot_w_px, 4), dtype=np.uint8)
-        top_color = np.array([252, 204, 5])
-        alpha_row = (230 * (1 - np.arange(plot_h_px) / max(1, plot_h_px - 1))).astype(np.uint8)
-        gradient[..., 0:3] = top_color
-        gradient[..., 3] = alpha_row[:, None]
-        gradient_img = Image.fromarray(gradient, mode="RGBA")
+        draw.line(points, fill=(241, 122, 36, 255), width=max(2, round(unit * 0.4)), joint="curve")
 
-        mask = Image.new("L", (plot_w_px, plot_h_px), 0)
-        mask_draw = ImageDraw.Draw(mask)
-        poly = [(x - plot_left, y - plot_top) for x, y in points] + [(plot_w_px, plot_h_px), (0, plot_h_px)]
-        mask_draw.polygon(poly, fill=255)
-        image.paste(gradient_img, (round(plot_left), round(plot_top)), mask)
-
-        draw.line(points, fill=(241, 122, 36, 255), width=max(2, round(unit * 0.4)))
+        # Axis labels drawn last so bars/line never cover them
+        draw.text((left, plot_top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((left, plot_bottom), f"{min_temp}°", font=label_font, fill=text_color, anchor="ls")
+        draw.text((right, plot_top), "100%", font=label_font, fill=text_color, anchor="ra")
+        draw.text((right, plot_bottom), "0%", font=label_font, fill=text_color, anchor="rs")
 
         # Hour labels, skipping enough to avoid overlap
         label_w = draw.textlength("00:00", font=label_font)
