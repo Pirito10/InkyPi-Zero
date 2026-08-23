@@ -1,7 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 import requests
 import logging
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 from astral import moon
 import pytz
 import math
@@ -25,6 +25,15 @@ def get_moon_phase_name(phase_age: float) -> str:
         if phase_age <= threshold:
             return phase_name  
     return "newmoon"
+
+def parse_open_meteo_dt(time_str, tz):
+    """Open-Meteo (with timezone=auto) returns naive local-time strings for the
+    queried location — already in `tz`, not the server's own clock — so they
+    must be localized directly rather than converted with .astimezone(tz),
+    which would misinterpret them if the server's system timezone differs
+    from the configured display timezone.
+    """
+    return tz.localize(datetime.fromisoformat(time_str))
 
 TEMPERATURE_UNIT = "°C"
 SPEED_UNIT = "m/s"
@@ -85,7 +94,7 @@ class Weather(BasePlugin):
     def parse_open_meteo_data(self, weather_data, aqi_data, tz, time_format, lat):
         current = weather_data.get("current", {})
         daily = weather_data.get('daily', {})
-        dt = datetime.fromisoformat(current.get('time')).astimezone(tz) if current.get('time') else datetime.now(tz)
+        dt = parse_open_meteo_dt(current.get('time'), tz) if current.get('time') else datetime.now(tz)
         weather_code = current.get("weather_code", 0)
         is_day = current.get("is_day", 1)
         current_icon = self.map_weather_code_to_icon(weather_code, is_day)
@@ -187,7 +196,7 @@ class Weather(BasePlugin):
         forecast = []
 
         for i in range(0, len(times)): 
-            dt = datetime.fromisoformat(times[i]).replace(tzinfo=timezone.utc).astimezone(tz)
+            dt = parse_open_meteo_dt(times[i], tz)
             day_label = dt.strftime("%a")
 
             code = weather_codes[i] if i < len(weather_codes) else 0
@@ -230,15 +239,15 @@ class Weather(BasePlugin):
         
         sun_map = {}
         for sr_s, ss_s in zip(sunrises, sunsets):
-            sr_dt = datetime.fromisoformat(sr_s).astimezone(tz)
-            ss_dt = datetime.fromisoformat(ss_s).astimezone(tz)
+            sr_dt = parse_open_meteo_dt(sr_s, tz)
+            ss_dt = parse_open_meteo_dt(ss_s, tz)
             sun_map[sr_dt.date()] = (sr_dt, ss_dt)
         
         current_time_in_tz = datetime.now(tz)
         start_index = 0
         for i, time_str in enumerate(times):
             try:
-                dt_hourly = datetime.fromisoformat(time_str).astimezone(tz)
+                dt_hourly = parse_open_meteo_dt(time_str, tz)
                 if dt_hourly.date() == current_time_in_tz.date() and dt_hourly.hour >= current_time_in_tz.hour:
                     start_index = i
                     break
@@ -255,7 +264,7 @@ class Weather(BasePlugin):
         sliced_codes = codes[start_index:]
 
         for i in range(min(24, len(sliced_times))):
-            dt = datetime.fromisoformat(sliced_times[i]).astimezone(tz)
+            dt = parse_open_meteo_dt(sliced_times[i], tz)
             sunrise, sunset = sun_map.get(dt.date(), (None, None))
             is_day = 0
             if sunrise and sunset:
@@ -284,7 +293,7 @@ class Weather(BasePlugin):
         # Sunrise
         sunrise_times = daily_data.get('sunrise', [])
         if sunrise_times:
-            sunrise_dt = datetime.fromisoformat(sunrise_times[0]).astimezone(tz)
+            sunrise_dt = parse_open_meteo_dt(sunrise_times[0], tz)
             data_points.append({
                 "label": "Sunrise",
                 "measurement": self.format_time(sunrise_dt, time_format, include_am_pm=False),
@@ -297,7 +306,7 @@ class Weather(BasePlugin):
         # Sunset
         sunset_times = daily_data.get('sunset', [])
         if sunset_times:
-            sunset_dt = datetime.fromisoformat(sunset_times[0]).astimezone(tz)
+            sunset_dt = parse_open_meteo_dt(sunset_times[0], tz)
             data_points.append({
                 "label": "Sunset",
                 "measurement": self.format_time(sunset_dt, time_format, include_am_pm=False),
@@ -323,7 +332,7 @@ class Weather(BasePlugin):
         humidity_values = hourly_data.get('relative_humidity_2m', [])
         for i, time_str in enumerate(humidity_hourly_times):
             try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
                     current_humidity = int(humidity_values[i])
                     break
             except ValueError:
@@ -340,7 +349,7 @@ class Weather(BasePlugin):
         pressure_values = hourly_data.get('surface_pressure', [])
         for i, time_str in enumerate(pressure_hourly_times):
             try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
                     current_pressure = int(pressure_values[i])
                     break
             except ValueError:
@@ -357,7 +366,7 @@ class Weather(BasePlugin):
         current_uv_index = "N/A"
         for i, time_str in enumerate(uv_index_hourly_times):
             try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
                     current_uv_index = uv_index_values[i]
                     break
             except ValueError:
@@ -376,7 +385,7 @@ class Weather(BasePlugin):
         visibility_max = 10.  # km
         for i, time_str in enumerate(visibility_hourly_times):
             try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
                     current_visibility = visibility_values[i]*visibility_conversion
                     at_max_visibility = current_visibility >= visibility_max
                     break
@@ -399,7 +408,7 @@ class Weather(BasePlugin):
         current_aqi = "N/A"
         for i, time_str in enumerate(aqi_hourly_times):
             try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
                     current_aqi = round(aqi_values[i], 1)
                     break
             except ValueError:
