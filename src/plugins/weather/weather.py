@@ -139,6 +139,10 @@ class Weather(BasePlugin):
             today_h -= chart_h + gap
         if show_forecast:
             today_h -= forecast_h + gap
+        # Fonts inside the today row scale with its height, so cap it — otherwise
+        # with the graph and forecast both off it would claim all the leftover
+        # height and blow the text up past its columns.
+        today_h = min(today_h, round(height * 0.4))
 
         self.draw_today_row(image, draw, (left, y, right, y + today_h), text_color, data, show_metrics)
         y += today_h
