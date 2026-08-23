@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, render_template
 from utils.app_utils import resolve_path
 from PIL import Image, ImageOps
+from urllib.parse import quote
 import os
 import logging
 
@@ -27,7 +28,7 @@ def list_library_photos():
         photos.append({
             "filename": file_name,
             "path": file_path,
-            "url": f"/static/images/saved/{file_name}",
+            "url": f"/static/images/saved/{quote(file_name)}",
             "mtime": os.path.getmtime(file_path)
         })
     photos.sort(key=lambda p: p["mtime"], reverse=True)

@@ -112,12 +112,19 @@
 
                 const item = document.createElement('div');
                 item.className = 'photo-picker-item' + (isSelected ? ' selected' : '');
-                item.innerHTML = `
-                    <input type="checkbox" name="imageFiles[]" value="${photo.path}" ${isSelected ? 'checked' : ''}>
-                    <img src="${photo.url}" alt="${photo.filename}">
-                `;
 
-                const checkbox = item.querySelector('input[type="checkbox"]');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'imageFiles[]';
+                checkbox.value = photo.path;
+                checkbox.checked = isSelected;
+                item.appendChild(checkbox);
+
+                const img = document.createElement('img');
+                img.src = photo.url;
+                img.alt = photo.filename;
+                item.appendChild(img);
+
                 checkbox.addEventListener('click', event => event.stopPropagation());
                 checkbox.addEventListener('change', () => {
                     item.classList.toggle('selected', checkbox.checked);

@@ -121,7 +121,7 @@
                 {% for photo in photos %}
                 <div class="library-photo" data-filename="{{ photo.filename }}">
                     <img src="{{ photo.url }}" alt="{{ photo.filename }}">
-                    <button type="button" class="btn-delete" onclick="deletePhoto('{{ photo.filename }}')" title="Borrar">×</button>
+                    <button type="button" class="btn-delete" data-filename="{{ photo.filename }}" title="Borrar">×</button>
                 </div>
                 {% endfor %}
             </div>
@@ -153,12 +153,30 @@
             const div = document.createElement('div');
             div.className = 'library-photo';
             div.dataset.filename = filename;
-            div.innerHTML = `
-                <img src="/static/images/saved/${filename}" alt="${filename}">
-                <button type="button" class="btn-delete" onclick="deletePhoto('${filename}')" title="Borrar">×</button>
-            `;
+
+            const img = document.createElement('img');
+            img.src = `/static/images/saved/${encodeURIComponent(filename)}`;
+            img.alt = filename;
+            div.appendChild(img);
+
+            div.appendChild(createDeleteButton(filename));
             grid.appendChild(div);
         }
+
+        function createDeleteButton(filename) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-delete';
+            button.title = 'Borrar';
+            button.textContent = '×';
+            button.addEventListener('click', () => deletePhoto(filename));
+            return button;
+        }
+
+        // Wire up delete buttons rendered server-side on page load
+        document.querySelectorAll('.btn-delete[data-filename]').forEach(button => {
+            button.addEventListener('click', () => deletePhoto(button.dataset.filename));
+        });
 
         async function uploadPhotos() {
             const input = document.getElementById('photoUpload');
