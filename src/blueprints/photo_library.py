@@ -31,8 +31,25 @@ def unique_file_path(library_dir, file_name):
     return file_path
 
 
+def build_photo_usage_map():
+    """Map each photo path in use to the list of 'instance (playlist)' names using it."""
+    device_config = current_app.config['DEVICE_CONFIG']
+    playlist_manager = device_config.get_playlist_manager()
+
+    usage_map = {}
+    for playlist in playlist_manager.playlists:
+        for plugin_instance in playlist.plugins:
+            if plugin_instance.plugin_id != "image_upload":
+                continue
+            label = f"{plugin_instance.name} ({playlist.name})"
+            for file_path in (plugin_instance.settings.get("imageFiles[]") or []):
+                usage_map.setdefault(file_path, []).append(label)
+    return usage_map
+
+
 def list_library_photos():
     library_dir = get_library_dir()
+    usage_map = build_photo_usage_map()
     photos = []
     for file_name in os.listdir(library_dir):
         extension = os.path.splitext(file_name)[1].replace('.', '').lower()
@@ -43,25 +60,11 @@ def list_library_photos():
             "filename": file_name,
             "path": file_path,
             "url": f"/static/images/saved/{quote(file_name)}",
-            "mtime": os.path.getmtime(file_path)
+            "mtime": os.path.getmtime(file_path),
+            "used_by": usage_map.get(file_path, [])
         })
     photos.sort(key=lambda p: p["mtime"], reverse=True)
     return photos
-
-
-def find_photo_users(file_path):
-    """Return a list of 'plugin_instance (playlist)' strings currently using this photo."""
-    device_config = current_app.config['DEVICE_CONFIG']
-    playlist_manager = device_config.get_playlist_manager()
-
-    users = []
-    for playlist in playlist_manager.playlists:
-        for plugin_instance in playlist.plugins:
-            if plugin_instance.plugin_id != "image_upload":
-                continue
-            if file_path in (plugin_instance.settings.get("imageFiles[]") or []):
-                users.append(f"{plugin_instance.name} ({playlist.name})")
-    return users
 
 
 @photo_library_bp.route('/photo-library')
@@ -121,7 +124,7 @@ def photo_library_delete():
     if not os.path.isfile(file_path):
         return jsonify({"error": "La foto no existe"}), 404
 
-    users = find_photo_users(file_path)
+    users = build_photo_usage_map().get(file_path, [])
     if users:
         return jsonify({
             "error": f"Esta foto está en uso en: {', '.join(users)}. Quítala de ahí antes de borrarla."

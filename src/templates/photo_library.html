@@ -44,15 +44,13 @@
             display: block;
         }
 
-        .library-photo .btn-delete {
+        .library-photo .btn-delete,
+        .library-photo .btn-expand {
             position: absolute;
             top: 6px;
-            right: 6px;
             width: 28px;
             height: 28px;
             border: none;
-            background: rgba(229, 57, 53, 0.9);
-            color: white;
             border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
@@ -61,8 +59,39 @@
             justify-content: center;
         }
 
+        .library-photo .btn-delete {
+            right: 6px;
+            background: rgba(229, 57, 53, 0.9);
+            color: white;
+        }
+
         .library-photo .btn-delete:hover {
             background: #C62828;
+        }
+
+        .library-photo .btn-expand {
+            left: 6px;
+            background: rgba(0, 0, 0, 0.55);
+            color: white;
+        }
+
+        .library-photo .btn-expand:hover {
+            background: rgba(0, 0, 0, 0.75);
+        }
+
+        .library-photo .usage-badge {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            font-size: 11px;
+            padding: 4px 6px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .btn-add {
@@ -121,7 +150,13 @@
                 {% for photo in photos %}
                 <div class="library-photo" data-filename="{{ photo.filename }}">
                     <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy" decoding="async">
+                    <button type="button" class="btn-expand" data-url="{{ photo.url }}" data-filename="{{ photo.filename }}" title="Ver grande">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </button>
                     <button type="button" class="btn-delete" data-filename="{{ photo.filename }}" title="Borrar">×</button>
+                    {% if photo.used_by %}
+                    <span class="usage-badge" title="{{ photo.used_by | join(', ') }}">En uso: {{ photo.used_by | join(', ') }}</span>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -161,6 +196,7 @@
             img.decoding = 'async';
             div.appendChild(img);
 
+            div.appendChild(createExpandButton(img.src, filename));
             div.appendChild(createDeleteButton(filename));
             grid.appendChild(div);
         }
@@ -175,9 +211,44 @@
             return button;
         }
 
-        // Wire up delete buttons rendered server-side on page load
+        function createExpandButton(url, filename) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-expand';
+            button.title = 'Ver grande';
+            button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+            button.addEventListener('click', () => openLightbox(url, filename));
+            return button;
+        }
+
+        function openLightbox(url, alt) {
+            const overlay = document.createElement('div');
+            overlay.className = 'image-modal-overlay';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = alt;
+            overlay.appendChild(img);
+
+            function close() {
+                overlay.remove();
+                document.removeEventListener('keydown', onKeyDown);
+            }
+            function onKeyDown(event) {
+                if (event.key === 'Escape') close();
+            }
+
+            overlay.addEventListener('click', close);
+            document.addEventListener('keydown', onKeyDown);
+            document.body.appendChild(overlay);
+        }
+
+        // Wire up buttons rendered server-side on page load
         document.querySelectorAll('.btn-delete[data-filename]').forEach(button => {
             button.addEventListener('click', () => deletePhoto(button.dataset.filename));
+        });
+        document.querySelectorAll('.btn-expand[data-filename]').forEach(button => {
+            button.addEventListener('click', () => openLightbox(button.dataset.url, button.dataset.filename));
         });
 
         async function uploadPhotos() {
