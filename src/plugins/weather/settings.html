@@ -15,24 +15,8 @@
 </div>
 
 <div class="form-group">
-    <label for="weatherProvider" class="form-label">Weather Provider:</label>
-    <select id="weatherProvider" name="weatherProvider" class="form-input" onchange="updateTitleOptions(this.value)">
-        <option value="OpenMeteo">Open-Meteo</option>
-        <option value="OpenWeatherMap">OpenWeatherMap</option>
-    </select>
-</div>
-
-<div class="form-group" id="titleOptionWrapper">
-    <label class="form-label">Title:</label>
-
-    <div class="form-group">
-        <input type="radio" id="title-location" name="titleSelection" value="location">
-        <label for="title-location">Location</label>
-
-        <input type="radio" id="title-custom" name="titleSelection" value="custom">
-        <label for="title-custom">Custom</label>
-        <input type="text" id="customTitle" name="customTitle" class="form-input" placeholder="Type something..." />
-    </div>
+    <label for="customTitle" class="form-label">Title:</label>
+    <input type="text" id="customTitle" name="customTitle" class="form-input" placeholder="Type something..." />
 </div>
 
 <div class="form-group">
@@ -57,13 +41,13 @@
         <input type="checkbox" id="displayRain" name="displayRain" onclick="this.value=this.checked ? 'true' : 'false';">
         <span>Rain Amount</span>
     </div>
-	
+
 
     <div class="form-group">
         <input type="checkbox" id="moonPhase" name="moonPhase" onclick="this.value=this.checked ? 'true' : 'false';">
         <span>Moon Phase</span>
     </div>
-	
+
 	<div class="form-group">
 		<input type="checkbox" id="displayGraphIcons" name="displayGraphIcons" onclick="this.value=this.checked ? 'true' : 'false';">
 		<span>Graph icons every</span>
@@ -88,14 +72,6 @@
         <span>days</span>
     </div>
 
-    <div class="form-group">
-        <label for="weatherTimeZone" class="form-label">Time Zone:</label>
-        <select id="weatherTimeZone" name="weatherTimeZone" class="form-input">
-            <option value="locationTimeZone">Use Location Time Zone</option>
-            <option value="localTimeZone">Use Local Time Zone</option>
-        </select>
-    </div>
-
 </div>
 
 <div id="mapModal" class="modal">
@@ -110,49 +86,6 @@
 
 <script>
 
-    function updateTitleOptions(provider) {
-        const titleLocationRadio = document.getElementById('title-location');
-        const titleLocationLabel = document.querySelector('label[for="title-location"]');
-        const titleCustomRadio = document.getElementById('title-custom');
-        const customTitleInput = document.getElementById('customTitle');
-        const titleTimeZone = document.getElementById('weatherTimeZone');
-        const titleTimeZoneLabel = document.querySelector('label[for="weatherTimeZone"]');
-        const apiKeyLabel = document.querySelector('.api-key-label');
-
-        if (provider === 'OpenMeteo') {
-            // Hide or disable "Location" radio option
-            titleLocationRadio.style.display = 'none';
-            titleLocationLabel.style.display = 'none';
-            titleLocationRadio.disabled = true;
-            titleTimeZone.style.display = 'none';
-            titleTimeZoneLabel.style.display = 'none';
-            titleTimeZone.disabled = true;
-
-            // Select and enable "Custom"
-            titleCustomRadio.checked = true;
-            titleCustomRadio.disabled = false;
-            customTitleInput.disabled = false;
-
-            // Hide API Key required label for Open-Meteo
-            if (apiKeyLabel) apiKeyLabel.style.display = 'none';
-        } else {
-            // Show and enable both options
-            titleLocationRadio.style.display = '';
-            titleLocationLabel.style.display = '';
-            titleLocationRadio.disabled = false;
-
-            titleCustomRadio.disabled = false;
-            customTitleInput.disabled = false;
-
-            titleTimeZone.style.display = '';
-            titleTimeZoneLabel.style.display = '';
-            titleTimeZone.disabled = false;
-
-            // Show API Key required label for OpenWeatherMap
-            if (apiKeyLabel) apiKeyLabel.style.display = '';
-        }
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
 
         const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -165,8 +98,6 @@
         let latitude = +$latitude.value;
         let longitude = +$longitude.value;
         let zoom = latitude && longitude ? 4.5 : 2.5;
-        let selectedTitle = 'location';
-        let weatherProvider = 'OpenMeteo';
 
         let map, marker;
 
@@ -207,10 +138,10 @@
 
 			document.getElementById('displayRain').checked = pluginSettings.displayRain;
             document.getElementById('displayRain').value = pluginSettings.displayRain;
-			
+
 			document.getElementById('displayGraphIcons').checked = pluginSettings.displayGraphIcons;
             document.getElementById('displayGraphIcons').value = pluginSettings.displayGraphIcons;
-			
+
             document.getElementById('displayForecast').checked = pluginSettings.displayForecast;
             document.getElementById('displayForecast').value = pluginSettings.displayForecast;
 
@@ -218,11 +149,6 @@
 
             document.getElementById('moonPhase').checked = pluginSettings.moonPhase;
             document.getElementById('moonPhase').value = pluginSettings.moonPhase;
-
-            document.getElementById('weatherTimeZone').value = pluginSettings.weatherTimeZone;
-            
-            selectedTitle = pluginSettings.titleSelection || 'location';
-            weatherProvider = pluginSettings.weatherProvider || 'OpenMeteo';
 
             document.getElementById('customTitle').value = pluginSettings.customTitle || '';
         } else {
@@ -242,11 +168,6 @@
             document.getElementById('forecastDays').value = 7;
             document.getElementById('moonPhase').checked = false;
 			document.getElementById('moonPhase').value = "false";
-            document.getElementById('weatherTimeZone').value = "locationTimeZone";
         }
-
-        document.getElementById('weatherProvider').value = weatherProvider;
-        document.querySelector(`input[name="titleSelection"][value="${selectedTitle}"]`).checked = true;
-        updateTitleOptions(weatherProvider)
     });
 </script>
