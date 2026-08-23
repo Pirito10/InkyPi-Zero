@@ -2,50 +2,50 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <div class="form-group">
-    <label class="form-label">Location: </label>
+    <label class="form-label">Ubicación: </label>
     <div class="form-group">
-        <span>Latitude </span>
+        <span>Latitud </span>
         <input readonly type="text" id="latitude" name="latitude" class="form-input" />
     </div>
     <div class="form-group">
-        <span>Longitude </span>
+        <span>Longitud </span>
         <input readonly type="text" id="longitude" name="longitude" class="form-input" />
     </div>
-    <button type="button" id="openMap" class="action-button compact">Select Location</button>
+    <button type="button" id="openMap" class="action-button compact">Elegir ubicación</button>
 </div>
 
 <div class="form-group">
-    <label for="customTitle" class="form-label">Title:</label>
-    <input type="text" id="customTitle" name="customTitle" class="form-input" placeholder="Type something..." />
+    <label for="customTitle" class="form-label">Título:</label>
+    <input type="text" id="customTitle" name="customTitle" class="form-input" placeholder="Escribe algo..." />
 </div>
 
 <div class="form-group">
-    <label for="displayMetrics" class="form-label">Display: </label>
+    <label for="displayMetrics" class="form-label">Mostrar: </label>
 
     <div class="form-group">
       <input type="checkbox" id="displayRefreshTime" name="displayRefreshTime" onclick="this.value=this.checked ? 'true' : 'false';">
-      <span>Refresh Time</span>
+      <span>Hora de actualización</span>
     </div>
 
     <div class="form-group">
         <input type="checkbox" id="displayMetrics" name="displayMetrics" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Metrics</span>
+        <span>Métricas</span>
     </div>
 
     <div class="form-group">
         <input type="checkbox" id="displayGraph" name="displayGraph" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
-        <span>Weather Graph</span>
+        <span>Gráfica del tiempo</span>
     </div>
 
     <div id="graph-options-group" style="margin-left: 20px; display: none;">
         <div class="form-group">
             <input type="checkbox" id="displayRain" name="displayRain" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Rain Amount</span>
+            <span>Cantidad de lluvia</span>
         </div>
 
         <div class="form-group">
             <input type="checkbox" id="displayGraphIcons" name="displayGraphIcons" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Graph icons every</span>
+            <span>Iconos en la gráfica cada</span>
             <select id="graphIconStep" name="graphIconStep" class="form-input">
                 <option value="1">1</option>
                 <option value="2" selected>2</option>
@@ -53,25 +53,25 @@
                 <option value="6">6</option>
                 <option value="12">12</option>
             </select>
-            <span>hours</span>
+            <span>horas</span>
         </div>
     </div>
 
     <div class="form-group">
         <input type="checkbox" id="displayForecast" name="displayForecast" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
-        <span>Forecast</span>
+        <span>Previsión</span>
         <select id="forecastDays" name="forecastDays" class="form-input">
             <option value=3>3</option>
             <option value=5>5</option>
             <option value=7>7</option>
         </select>
-        <span>days</span>
+        <span>días</span>
     </div>
 
     <div id="forecast-options-group" style="margin-left: 20px; display: none;">
         <div class="form-group">
             <input type="checkbox" id="moonPhase" name="moonPhase" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Moon Phase</span>
+            <span>Fase lunar</span>
         </div>
     </div>
 
@@ -80,10 +80,10 @@
 <div id="mapModal" class="modal">
     <div class="modal-content">
         <span class="close-button" onclick="closeModal('mapModal')">×</span>
-        <h2 id="modalTitle">Select Location</h2>
+        <h2 id="modalTitle">Elegir ubicación</h2>
         <div class="separator"></div>
         <div id="map" style="width: 100%; height: 200px; margin: 10px 0px;"></div>
-        <button id="closeMap" class="action-button">Save</button>
+        <button id="closeMap" class="action-button">Guardar</button>
     </div>
 </div>
 

@@ -37,6 +37,13 @@ def parse_open_meteo_dt(time_str, tz):
     """
     return tz.localize(datetime.fromisoformat(time_str))
 
+WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+WEEKDAYS_ES_LONG = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
+
 TEMPERATURE_UNIT = "°C"
 SPEED_UNIT = "m/s"
 DISTANCE_UNIT = "km"
@@ -54,7 +61,7 @@ class Weather(BasePlugin):
         lat_str = settings.get('latitude')
         long_str = settings.get('longitude')
         if not lat_str or not long_str:
-            raise RuntimeError("Latitude and Longitude are required.")
+            raise RuntimeError("La latitud y la longitud son obligatorias.")
         lat = float(lat_str)
         long = float(long_str)
 
@@ -71,7 +78,7 @@ class Weather(BasePlugin):
             data = self.parse_open_meteo_data(weather_data, aqi_data, tz, time_format, lat)
         except Exception as e:
             logger.error(f"Open-Meteo request failed: {str(e)}")
-            raise RuntimeError("Open-Meteo request failure, please check logs.")
+            raise RuntimeError("Fallo en la petición a Open-Meteo, revisa los registros.")
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
@@ -105,7 +112,7 @@ class Weather(BasePlugin):
 
         if show_refresh:
             refresh_font = get_font("Jost", max(1, round(height * 0.03)), font_weight="bold")
-            draw.text((right, top), f"Last refresh: {last_refresh_time}", font=refresh_font, fill=text_color, anchor="ra")
+            draw.text((right, top), f"Última actualización: {last_refresh_time}", font=refresh_font, fill=text_color, anchor="ra")
 
         gap = round(height * 0.02)
         chart_h = round(height * 0.24) if show_graph else 0
@@ -193,7 +200,7 @@ class Weather(BasePlugin):
         draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
         y += temp_h
 
-        draw.text((temp_center_x, y), f"Feels Like {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
+        draw.text((temp_center_x, y), f"Sensación {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
         y += feels_h
 
         today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
@@ -413,7 +420,7 @@ class Weather(BasePlugin):
         current_icon = self.map_weather_code_to_icon(weather_code, is_day)
 
         data = {
-            "current_date": dt.strftime("%A, %B %d"),
+            "current_date": f"{WEEKDAYS_ES_LONG[dt.weekday()]}, {dt.day} de {MONTHS_ES[dt.month - 1]}",
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
             "current_temperature": str(round(current.get("temperature", 0))),
             "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)))),
@@ -510,7 +517,7 @@ class Weather(BasePlugin):
 
         for i in range(0, len(times)): 
             dt = parse_open_meteo_dt(times[i], tz)
-            day_label = dt.strftime("%a")
+            day_label = WEEKDAYS_ES[dt.weekday()]
 
             code = weather_codes[i] if i < len(weather_codes) else 0
             weather_icon = self.map_weather_code_to_icon(code, is_day=1)
@@ -608,7 +615,7 @@ class Weather(BasePlugin):
         if sunrise_times:
             sunrise_dt = parse_open_meteo_dt(sunrise_times[0], tz)
             data_points.append({
-                "label": "Sunrise",
+                "label": "Amanecer",
                 "measurement": self.format_time(sunrise_dt, time_format, include_am_pm=False),
                 "unit": "" if time_format == "24h" else sunrise_dt.strftime('%p'),
                 "icon": self.get_plugin_dir('icons/sunrise.png')
@@ -621,7 +628,7 @@ class Weather(BasePlugin):
         if sunset_times:
             sunset_dt = parse_open_meteo_dt(sunset_times[0], tz)
             data_points.append({
-                "label": "Sunset",
+                "label": "Atardecer",
                 "measurement": self.format_time(sunset_dt, time_format, include_am_pm=False),
                 "unit": "" if time_format == "24h" else sunset_dt.strftime('%p'),
                 "icon": self.get_plugin_dir('icons/sunset.png')
@@ -635,7 +642,7 @@ class Weather(BasePlugin):
         wind_arrow = self.get_wind_arrow(wind_deg)
         wind_unit = SPEED_UNIT
         data_points.append({
-            "label": "Wind", "measurement": wind_speed, "unit": wind_unit,
+            "label": "Viento", "measurement": wind_speed, "unit": wind_unit,
             "icon": self.get_plugin_dir('icons/wind.png'), "arrow": wind_arrow
         })
 
@@ -649,7 +656,7 @@ class Weather(BasePlugin):
         humidity_values = hourly_data.get('relative_humidity_2m', [])
         current_humidity = int(humidity_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
-            "label": "Humidity", "measurement": current_humidity, "unit": '%',
+            "label": "Humedad", "measurement": current_humidity, "unit": '%',
             "icon": self.get_plugin_dir('icons/humidity.png')
         })
 
@@ -657,7 +664,7 @@ class Weather(BasePlugin):
         pressure_values = hourly_data.get('surface_pressure', [])
         current_pressure = int(pressure_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
-            "label": "Pressure", "measurement": current_pressure, "unit": 'hPa',
+            "label": "Presión", "measurement": current_pressure, "unit": 'hPa',
             "icon": self.get_plugin_dir('icons/pressure.png')
         })
 
@@ -665,7 +672,7 @@ class Weather(BasePlugin):
         uv_index_values = aqi_data.get('hourly', {}).get('uv_index', [])
         current_uv_index = uv_index_values[aqi_hour_index] if aqi_hour_index is not None else "N/A"
         data_points.append({
-            "label": "UV Index", "measurement": current_uv_index, "unit": '',
+            "label": "Índice UV", "measurement": current_uv_index, "unit": '',
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
@@ -681,7 +688,7 @@ class Weather(BasePlugin):
             if current_visibility >= visibility_max:
                 visibility_str = u"\u2265" + visibility_str
         data_points.append({
-            "label": "Visibility",
+            "label": "Visibilidad",
             "measurement": visibility_str,
             "unit": DISTANCE_UNIT,
             "icon": self.get_plugin_dir('icons/visibility.png')
@@ -692,9 +699,9 @@ class Weather(BasePlugin):
         current_aqi = round(aqi_values[aqi_hour_index], 1) if aqi_hour_index is not None else "N/A"
         scale = ""
         if current_aqi and current_aqi != "N/A":
-            scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(int(current_aqi//20), 5)]
+            scale = ["Buena","Aceptable","Moderada","Mala","Muy mala","Pésima"][min(int(current_aqi//20), 5)]
         data_points.append({
-            "label": "Air Quality", "measurement": current_aqi,
+            "label": "Calidad del aire", "measurement": current_aqi,
             "unit": scale, "icon": self.get_plugin_dir('icons/aqi.png')
         })
 
@@ -735,7 +742,7 @@ class Weather(BasePlugin):
 
         if not 200 <= response.status_code < 300:
             logger.error(f"Failed to retrieve Open-Meteo weather data: {response.content}")
-            raise RuntimeError("Failed to retrieve Open-Meteo weather data.")
+            raise RuntimeError("No se han podido obtener los datos meteorológicos de Open-Meteo.")
         
         return response.json()
 
@@ -744,7 +751,7 @@ class Weather(BasePlugin):
         response = requests.get(url, timeout=30)
         if not 200 <= response.status_code < 300:
             logger.error(f"Failed to retrieve Open-Meteo air quality data: {response.content}")
-            raise RuntimeError("Failed to retrieve Open-Meteo air quality data.")
+            raise RuntimeError("No se han podido obtener los datos de calidad del aire de Open-Meteo.")
         
         return response.json()
     
