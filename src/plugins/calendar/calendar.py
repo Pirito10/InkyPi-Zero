@@ -1,7 +1,7 @@
 import os
 from utils.app_utils import resolve_path, get_font
 from plugins.base_plugin.base_plugin import BasePlugin
-from plugins.calendar.constants import LOCALE_MAP, FONT_SIZES
+from plugins.calendar.constants import FONT_SIZES
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 import icalendar
 import recurring_ical_events
@@ -17,7 +17,6 @@ class Calendar(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
         template_params['style_settings'] = True
-        template_params['locale_map'] = LOCALE_MAP
         return template_params
 
     def generate_image(self, settings, device_config):
@@ -100,9 +99,8 @@ class Calendar(BasePlugin):
             end = start + timedelta(days=1)
         elif view == "timeGridWeek":
             if settings.get("displayPreviousDays") == "true":
-                week_start_day = int(settings.get("weekStartDay", 1))
-                python_week_start = (week_start_day - 1) % 7
-                offset = (current_dt.weekday() - python_week_start) % 7
+                # Weeks always start on Monday.
+                offset = current_dt.weekday()
                 start = current_dt - timedelta(days=offset)
                 start = datetime(start.year, start.month, start.day)
             end = start + timedelta(days=7)
