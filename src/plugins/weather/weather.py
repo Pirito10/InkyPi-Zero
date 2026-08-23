@@ -422,7 +422,7 @@ class Weather(BasePlugin):
                 continue
         scale = ""
         if current_aqi and current_aqi != "N/A":
-            scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(current_aqi//20,5)]
+            scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(int(current_aqi//20), 5)]
         data_points.append({
             "label": "Air Quality", "measurement": current_aqi,
             "unit": scale, "icon": self.get_plugin_dir('icons/aqi.png')
