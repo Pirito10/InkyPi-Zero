@@ -212,9 +212,9 @@ class Weather(BasePlugin):
         cell_w = width / cols
         cell_h = height / rows
 
-        label_font = get_font("Jost", max(1, round(cell_h * 0.2)))
-        measure_font = get_font("Jost", max(1, round(cell_h * 0.32)), font_weight="bold")
-        unit_font = get_font("Jost", max(1, round(cell_h * 0.2)))
+        label_font = get_font("Jost", max(1, round(cell_h * 0.26)))
+        measure_font = get_font("Jost", max(1, round(cell_h * 0.42)), font_weight="bold")
+        unit_font = get_font("Jost", max(1, round(cell_h * 0.26)))
 
         for i, dp in enumerate(data_points):
             col, row = i % cols, i // cols
