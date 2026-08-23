@@ -227,34 +227,31 @@ class Weather(BasePlugin):
             icon_y = round(cell_top + (cell_h - icon_size) / 2)
             image.paste(icon_img, (icon_x, icon_y), icon_img)
 
-            text_left = icon_x + icon_size + round(cell_w * 0.04)
-            text_center_x = text_left + (cell_left + cell_w - text_left) / 2
+            text_left = icon_x + icon_size + round(cell_w * 0.060)
 
             label_h = sum(label_font.getmetrics())
             measure_h = sum(measure_font.getmetrics())
             y = cell_top + (cell_h - label_h - measure_h) / 2
 
-            draw.text((text_center_x, y), dp['label'], font=label_font, fill=text_color, anchor="ma")
+            draw.text((text_left, y), dp['label'], font=label_font, fill=text_color, anchor="la")
             y += label_h
 
             unit_gap = round(cell_w * 0.015)
             measure_text = str(dp['measurement'])
             unit_text = dp.get('unit') or ''
             arrow_text = dp.get('arrow') or ''
-            measure_w = draw.textlength(measure_text, font=measure_font)
-            unit_w = draw.textlength(unit_text, font=unit_font) + unit_gap if unit_text else 0
-            arrow_w = draw.textlength(arrow_text, font=measure_font) + unit_gap if arrow_text else 0
-            total_w = measure_w + unit_w + arrow_w
-            x = text_center_x - total_w / 2
+            baseline_y = y + measure_font.getmetrics()[0]
+            x = text_left
             draw.text((x, y), measure_text, font=measure_font, fill=text_color, anchor="la")
+            measure_w = draw.textlength(measure_text, font=measure_font)
             x += measure_w
             if unit_text:
                 x += unit_gap
-                draw.text((x, y), unit_text, font=unit_font, fill=text_color, anchor="la")
-                x += unit_w - unit_gap
+                draw.text((x, baseline_y), unit_text, font=unit_font, fill=text_color, anchor="ls")
+                x += draw.textlength(unit_text, font=unit_font)
             if arrow_text:
                 x += unit_gap
-                draw.text((x, y), arrow_text, font=measure_font, fill=text_color, anchor="la")
+                draw.text((x, baseline_y), arrow_text, font=measure_font, fill=text_color, anchor="ls")
 
     def draw_hourly_chart(self, image, draw, box, text_color, hourly_forecast, show_rain, show_graph_icons, icon_step):
         left, top, right, bottom = box
