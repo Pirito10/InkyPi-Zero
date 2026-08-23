@@ -271,9 +271,13 @@ class Weather(BasePlugin):
 
         left_margin = round(draw.textlength(f"{max_temp}°", font=label_font)) + round(unit * 3)
         right_margin = round(draw.textlength("100%", font=label_font)) + round(unit * 3)
-        bottom_margin = round(height * 0.16)
+
+        label_h = sum(label_font.getmetrics())
+        top_margin = label_h + round(unit * 1.5)
+        axis_bottom_h = label_h + round(unit * 0.5)
+        hour_label_h = label_h + round(unit * 1.5)
+        bottom_margin = axis_bottom_h + hour_label_h
         icon_margin = round(height * 0.22) if show_graph_icons else 0
-        top_margin = round(height * 0.08)
 
         plot_left = left + left_margin
         plot_right = right - right_margin
@@ -307,18 +311,21 @@ class Weather(BasePlugin):
         points = [(x_for(i), y_for_temp(h['temperature'])) for i, h in enumerate(hourly_forecast)]
         draw.line(points, fill=(241, 122, 36, 255), width=max(2, round(unit * 0.4)), joint="curve")
 
-        # Axis labels drawn last so bars/line never cover them
-        draw.text((left, plot_top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
-        draw.text((left, plot_bottom), f"{min_temp}°", font=label_font, fill=text_color, anchor="ls")
-        draw.text((right, plot_top), "100%", font=label_font, fill=text_color, anchor="ra")
-        draw.text((right, plot_bottom), "0%", font=label_font, fill=text_color, anchor="rs")
+        # Axis labels live in their own reserved margins, above/below the
+        # plot area, so bars/line never cover them.
+        axis_gap = round(unit * 0.5)
+        draw.text((left, top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((left, plot_bottom + axis_gap), f"{min_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((right, top), "100%", font=label_font, fill=text_color, anchor="ra")
+        draw.text((right, plot_bottom + axis_gap), "0%", font=label_font, fill=text_color, anchor="ra")
 
         # Hour labels, skipping enough to avoid overlap
         label_w = draw.textlength("00:00", font=label_font)
         max_labels = max(1, int(plot_width / (label_w * 2.2)))
         label_step = max(1, round(n / max_labels))
+        hour_label_y = plot_bottom + axis_bottom_h + axis_gap
         for i in range(0, n, label_step):
-            draw.text((x_for(i), plot_bottom + round(unit)), hourly_forecast[i]['time'], font=label_font, fill=text_color, anchor="ma")
+            draw.text((x_for(i), hour_label_y), hourly_forecast[i]['time'], font=label_font, fill=text_color, anchor="ma")
 
         if show_rain:
             rain_font = get_font("Jost", max(1, round(height * 0.07)))
