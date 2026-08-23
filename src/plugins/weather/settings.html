@@ -20,6 +20,14 @@
 </div>
 
 <div class="form-group">
+    <label for="mode" class="form-label">Modo:</label>
+    <select id="mode" name="mode" class="form-input" onchange="toggleDependentGroups();">
+        <option value="advanced">Avanzado</option>
+        <option value="simple">Simple</option>
+    </select>
+</div>
+
+<div class="form-group">
     <label for="displayMetrics" class="form-label">Mostrar: </label>
 
     <div class="form-group">
@@ -27,33 +35,35 @@
       <span>Hora de actualización</span>
     </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="displayMetrics" name="displayMetrics" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Métricas</span>
-    </div>
-
-    <div class="form-group">
-        <input type="checkbox" id="displayGraph" name="displayGraph" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
-        <span>Gráfica del tiempo</span>
-    </div>
-
-    <div id="graph-options-group" style="margin-left: 20px; display: none;">
+    <div id="advanced-mode-group">
         <div class="form-group">
-            <input type="checkbox" id="displayRain" name="displayRain" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Cantidad de lluvia</span>
+            <input type="checkbox" id="displayMetrics" name="displayMetrics" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Métricas</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="displayGraphIcons" name="displayGraphIcons" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Iconos en la gráfica cada</span>
-            <select id="graphIconStep" name="graphIconStep" class="form-input">
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-                <option value="4">4</option>
-                <option value="6">6</option>
-                <option value="12">12</option>
-            </select>
-            <span>horas</span>
+            <input type="checkbox" id="displayGraph" name="displayGraph" onclick="this.value=this.checked ? 'true' : 'false'; toggleDependentGroups();">
+            <span>Gráfica del tiempo</span>
+        </div>
+
+        <div id="graph-options-group" style="margin-left: 20px; display: none;">
+            <div class="form-group">
+                <input type="checkbox" id="displayRain" name="displayRain" onclick="this.value=this.checked ? 'true' : 'false';">
+                <span>Cantidad de lluvia</span>
+            </div>
+
+            <div class="form-group">
+                <input type="checkbox" id="displayGraphIcons" name="displayGraphIcons" onclick="this.value=this.checked ? 'true' : 'false';">
+                <span>Iconos en la gráfica cada</span>
+                <select id="graphIconStep" name="graphIconStep" class="form-input">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="4">4</option>
+                    <option value="6">6</option>
+                    <option value="12">12</option>
+                </select>
+                <span>horas</span>
+            </div>
         </div>
     </div>
 
@@ -90,6 +100,8 @@
 <script>
 
     function toggleDependentGroups() {
+        document.getElementById('advanced-mode-group').style.display =
+            document.getElementById('mode').value === 'simple' ? 'none' : '';
         document.getElementById('graph-options-group').style.display =
             document.getElementById('displayGraph').checked ? '' : 'none';
         document.getElementById('forecast-options-group').style.display =
@@ -136,6 +148,8 @@
         if (loadPluginSettings) {
             document.getElementById('latitude').value = pluginSettings.latitude;
             document.getElementById('longitude').value = pluginSettings.longitude;
+
+            document.getElementById('mode').value = pluginSettings.mode || 'advanced';
 
             document.getElementById('displayRefreshTime').checked = pluginSettings.displayRefreshTime;
             document.getElementById('displayRefreshTime').value = pluginSettings.displayRefreshTime;

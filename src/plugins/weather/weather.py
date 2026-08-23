@@ -100,9 +100,11 @@ class Weather(BasePlugin):
         width = right - left
         height = bottom - top
 
+        simple_mode = settings.get('mode') == 'simple'
+
         show_refresh = settings.get('displayRefreshTime') == 'true'
-        show_metrics = settings.get('displayMetrics') == 'true'
-        show_graph = settings.get('displayGraph') == 'true'
+        show_metrics = settings.get('displayMetrics') == 'true' and not simple_mode
+        show_graph = settings.get('displayGraph') == 'true' and not simple_mode
         show_forecast = settings.get('displayForecast') == 'true'
         show_rain = settings.get('displayRain') == 'true'
         show_graph_icons = settings.get('displayGraphIcons') == 'true'
