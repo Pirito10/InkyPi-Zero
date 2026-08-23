@@ -187,7 +187,7 @@ class Calendar(BasePlugin):
             title_font = get_font("Jost", max(1, round(title_h * 0.6)), font_weight="bold")
             draw.text(
                 (left + width / 2, top + title_h / 2),
-                self.get_title(view, current_dt, settings),
+                self.get_title(view, current_dt, settings, show_weekends),
                 font=title_font, fill=text_color, anchor="mm"
             )
             top += title_h
@@ -201,13 +201,15 @@ class Calendar(BasePlugin):
         elif view == "listMonth":
             self.draw_list_view(draw, grid_box, text_color, events, current_dt, settings, font_scale, time_format)
 
-    def get_title(self, view, current_dt, settings):
+    def get_title(self, view, current_dt, settings, show_weekends=True):
         if view == "timeGridDay":
             return f"{WEEKDAYS_ES_LONG[current_dt.weekday()]}, {current_dt.day} de {MONTHS_ES[current_dt.month - 1]}"
         if view in ("dayGridMonth",):
             return f"{MONTHS_ES[current_dt.month - 1].capitalize()} {current_dt.year}"
         if view in ("timeGridWeek", "timeGrid", "dayGrid"):
-            days = self.get_grid_days(view, current_dt, settings)
+            if view == "timeGridWeek" and settings.get("displayPreviousDays") != "true":
+                view = "timeGrid"
+            days = self.get_grid_days(view, current_dt, settings, show_weekends)
             first, last = days[0], days[-1]
             if first.month == last.month:
                 return f"{first.day} - {last.day} de {MONTHS_ES[first.month - 1]}"
