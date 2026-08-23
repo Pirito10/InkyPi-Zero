@@ -1,12 +1,11 @@
 from plugins.base_plugin.base_plugin import BasePlugin
+from utils.app_utils import get_font
 from PIL import Image
-import os
 import requests
 import logging
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 from astral import moon
 import pytz
-from io import BytesIO
 import math
 
 logger = logging.getLogger(__name__)
@@ -29,59 +28,47 @@ def get_moon_phase_name(phase_age: float) -> str:
             return phase_name  
     return "newmoon"
 
-UNITS = {
-    "standard": {
-        "temperature": "K",
-        "speed": "m/s",
-        "distance":"km"
-    },
-    "metric": {
-        "temperature": "°C",
-        "speed": "m/s",
-        "distance":"km"
+def parse_open_meteo_dt(time_str, tz):
+    """Open-Meteo (with timezone=auto) returns naive local-time strings for the
+    queried location — already in `tz`, not the server's own clock — so they
+    must be localized directly rather than converted with .astimezone(tz),
+    which would misinterpret them if the server's system timezone differs
+    from the configured display timezone.
+    """
+    return tz.localize(datetime.fromisoformat(time_str))
 
-    },
-    "imperial": {
-        "temperature": "°F",
-        "speed": "mph",
-        "distance":"mi"
-    }
-}
+WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+WEEKDAYS_ES_LONG = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
 
-WEATHER_URL = "https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={long}&units={units}&exclude=minutely&appid={api_key}"
-AIR_QUALITY_URL = "http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={long}&appid={api_key}"
-GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={long}&limit=1&appid={api_key}"
+TEMPERATURE_UNIT = "°C"
+SPEED_UNIT = "m/s"
+DISTANCE_UNIT = "km"
 
-OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,surface_pressure,visibility&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current=temperature,windspeed,winddirection,is_day,precipitation,weather_code,apparent_temperature&timezone=auto&models=best_match&forecast_days={forecast_days}"
+HIGH_COLOR = (196, 40, 40)
+LOW_COLOR = (37, 99, 200)
+SIMPLE_CARD_BG = (232, 232, 232)
+
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,surface_pressure,visibility&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current=temperature,windspeed,winddirection,is_day,precipitation,weather_code,apparent_temperature&timezone=auto&models=best_match&forecast_days={forecast_days}&temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm"
 OPEN_METEO_AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={long}&hourly=european_aqi,uv_index,uv_index_clear_sky&timezone=auto"
-OPEN_METEO_UNIT_PARAMS = {
-    "standard": "temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm",  # temperature is converted to Kelvin later
-    "metric":   "temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm",
-    "imperial": "temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch"
-}
 
 class Weather(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
-        template_params['api_key'] = {
-            "required": True,
-            "service": "OpenWeatherMap",
-            "expected_key": "OPEN_WEATHER_MAP_SECRET"
-        }
         template_params['style_settings'] = True
         return template_params
 
     def generate_image(self, settings, device_config):
-        lat = float(settings.get('latitude'))
-        long = float(settings.get('longitude'))
-        if not lat or not long:
-            raise RuntimeError("Latitude and Longitude are required.")
+        lat_str = settings.get('latitude')
+        long_str = settings.get('longitude')
+        if not lat_str or not long_str:
+            raise RuntimeError("La latitud y la longitud son obligatorias.")
+        lat = float(lat_str)
+        long = float(long_str)
 
-        units = settings.get('units')
-        if not units or units not in ['metric', 'imperial', 'standard']:
-            raise RuntimeError("Units are required.")
-
-        weather_provider = settings.get('weatherProvider', 'OpenWeatherMap')
         title = settings.get('customTitle', '')
 
         timezone = device_config.get_config("timezone", default="America/New_York")
@@ -89,105 +76,498 @@ class Weather(BasePlugin):
         tz = pytz.timezone(timezone)
 
         try:
-            if weather_provider == "OpenWeatherMap":
-                api_key = device_config.load_env_key("OPEN_WEATHER_MAP_SECRET")
-                if not api_key:
-                    raise RuntimeError("Open Weather Map API Key not configured.")
-                weather_data = self.get_weather_data(api_key, units, lat, long)
-                aqi_data = self.get_air_quality(api_key, lat, long)
-                if settings.get('titleSelection', 'location') == 'location':
-                    title = self.get_location(api_key, lat, long)
-                if settings.get('weatherTimeZone', 'locationTimeZone') == 'locationTimeZone':
-                    logger.info("Using location timezone for OpenWeatherMap data.")
-                    wtz = self.parse_timezone(weather_data)
-                    template_params = self.parse_weather_data(weather_data, aqi_data, wtz, units, time_format, lat)
-                else:
-                    logger.info("Using configured timezone for OpenWeatherMap data.")
-                    template_params = self.parse_weather_data(weather_data, aqi_data, tz, units, time_format, lat)
-            elif weather_provider == "OpenMeteo":
-                forecast_days = 7
-                weather_data = self.get_open_meteo_data(lat, long, units, forecast_days + 1)
-                aqi_data = self.get_open_meteo_air_quality(lat, long)
-                template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, units, time_format, lat)
-            else:
-                raise RuntimeError(f"Unknown weather provider: {weather_provider}")
-
-            template_params['title'] = title
+            forecast_days = 7
+            weather_data = self.get_open_meteo_data(lat, long, forecast_days + 1)
+            aqi_data = self.get_open_meteo_air_quality(lat, long)
+            data = self.parse_open_meteo_data(weather_data, aqi_data, tz, time_format, lat)
         except Exception as e:
-            logger.error(f"{weather_provider} request failed: {str(e)}")
-            raise RuntimeError(f"{weather_provider} request failure, please check logs.")
-       
+            logger.error(f"Open-Meteo request failed: {str(e)}")
+            raise RuntimeError("Fallo en la petición a Open-Meteo, revisa los registros.")
+
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        template_params["plugin_settings"] = settings
-
-        # Add last refresh time
         now = datetime.now(tz)
         if time_format == "24h":
             last_refresh_time = now.strftime("%Y-%m-%d %H:%M")
         else:
             last_refresh_time = now.strftime("%Y-%m-%d %I:%M %p")
-        template_params["last_refresh_time"] = last_refresh_time
 
-        image = self.render_image(dimensions, "weather.html", "weather.css", template_params)
+        def draw_content(image, draw, content_box, text_color):
+            self.draw_weather_dashboard(image, draw, content_box, text_color, title, data, settings, last_refresh_time)
 
-        if not image:
-            raise RuntimeError("Failed to take screenshot, please check logs.")
-        return image
+        return self.render_image_pil(dimensions, settings, draw_content)
 
-    def parse_weather_data(self, weather_data, aqi_data, tz, units, time_format, lat):
-        current = weather_data.get("current")
-        daily_forecast = weather_data.get("daily", [])
-        dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
-        current_icon = current.get("weather")[0].get("icon")
-        icon_codes_to_preserve = ["01", "02", "10"]
-        icon_code = current_icon[:2]
-        current_suffix = current_icon[-1]
+    def draw_weather_dashboard(self, image, draw, content_box, text_color, title, data, settings, last_refresh_time):
+        left, top, right, bottom = content_box
+        width = right - left
+        height = bottom - top
 
-        if icon_code not in icon_codes_to_preserve:
-            if current_icon.endswith('n'):
-                current_icon = current_icon.replace("n", "d")
-        data = {
-            "current_date": dt.strftime("%A, %B %d"),
-            "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
-            "current_temperature": str(round(current.get("temp"))),
-            "feels_like": str(round(current.get("feels_like"))),
-            "temperature_unit": UNITS[units]["temperature"],
-            "units": units,
-            "time_format": time_format
-        }
-        data['forecast'] = self.parse_forecast(weather_data.get('daily'), tz, current_suffix, lat)
-        data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units, time_format)
+        simple_mode = settings.get('mode') == 'simple'
 
-        data['hourly_forecast'] = self.parse_hourly(weather_data.get('hourly'), tz, time_format, units, daily_forecast)
-        return data
+        show_refresh = settings.get('displayRefreshTime') == 'true'
+        show_metrics = settings.get('displayMetrics') == 'true' and not simple_mode
+        show_graph = settings.get('displayGraph') == 'true' and not simple_mode
+        show_forecast = settings.get('displayForecast') == 'true'
+        show_rain = settings.get('displayRain') == 'true'
+        show_graph_icons = settings.get('displayGraphIcons') == 'true'
+        show_moon = settings.get('moonPhase') == 'true'
+        forecast_days = int(settings.get('forecastDays') or 7)
+        icon_step = int(settings.get('graphIconStep') or 2)
 
-    def parse_open_meteo_data(self, weather_data, aqi_data, tz, units, time_format, lat):
+        if show_refresh:
+            refresh_font = get_font("Jost", max(1, round(height * 0.03)), font_weight="bold")
+            draw.text((right, top), f"Última actualización: {last_refresh_time}", font=refresh_font, fill=text_color, anchor="ra")
+
+        gap = round(height * 0.02)
+        header_h = round(height * 0.15)
+
+        y = top
+        self.draw_weather_header(draw, (left, y, right, y + header_h), text_color, title, data['current_date'])
+        y += header_h + gap
+
+        if simple_mode:
+            self.draw_simple_weather(image, draw, (left, y, right, bottom), text_color, data, forecast_days)
+            return
+
+        chart_h = round(height * 0.24) if show_graph else 0
+        forecast_h = round(height * 0.24) if show_forecast else 0
+
+        today_h = height - header_h - gap
+        if show_graph:
+            today_h -= chart_h + gap
+        if show_forecast:
+            today_h -= forecast_h + gap
+        # Fonts inside the today row scale with its height, so cap it — otherwise
+        # with the graph and forecast both off it would claim all the leftover
+        # height and blow the text up past its columns.
+        today_h = min(today_h, round(height * 0.4))
+
+        self.draw_today_row(image, draw, (left, y, right, y + today_h), text_color, data, show_metrics)
+        y += today_h
+
+        if show_graph:
+            y += gap
+            self.draw_hourly_chart(image, draw, (left, y, right, y + chart_h), text_color, data['hourly_forecast'], show_rain, show_graph_icons, icon_step)
+            y += chart_h
+
+        if show_forecast:
+            y += gap
+            self.draw_forecast_row(image, draw, (left, y, right, y + forecast_h), text_color, data['forecast'][1:forecast_days + 1], show_moon)
+
+    def draw_weather_header(self, draw, box, text_color, title, current_date):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        center_x = left + width / 2
+
+        title_font = get_font("Jost", max(1, round(height * 0.5)), font_weight="bold")
+        date_font = get_font("Jost", max(1, round(height * 0.3)))
+
+        if title:
+            title_h = sum(title_font.getmetrics())
+            date_h = sum(date_font.getmetrics())
+            y = bottom - title_h - date_h
+            draw.text((center_x, y), title, font=title_font, fill=text_color, anchor="ma")
+            y += title_h
+            draw.text((center_x, y), current_date, font=date_font, fill=text_color, anchor="ma")
+        else:
+            date_h = sum(date_font.getmetrics())
+            draw.text((center_x, bottom - date_h), current_date, font=date_font, fill=text_color, anchor="ma")
+
+    def draw_triangle(self, draw, center_x, center_y, size, color, pointing):
+        if pointing == "up":
+            points = [(center_x, center_y - size / 2), (center_x - size / 2, center_y + size / 2), (center_x + size / 2, center_y + size / 2)]
+        else:
+            points = [(center_x, center_y + size / 2), (center_x - size / 2, center_y - size / 2), (center_x + size / 2, center_y - size / 2)]
+        draw.polygon(points, fill=color)
+
+    def high_low_width(self, draw, high_text, low_text, font, triangle_size, gap):
+        high_w = draw.textlength(high_text, font=font)
+        low_w = draw.textlength(low_text, font=font)
+        return triangle_size + gap + high_w + gap * 2 + triangle_size + gap + low_w
+
+    def draw_high_low(self, draw, x, center_y, high_text, low_text, font, triangle_size, gap):
+        """Draws '▲ high  ▼ low' left-to-right starting at x, vertically centered on center_y."""
+        self.draw_triangle(draw, x + triangle_size / 2, center_y, triangle_size, HIGH_COLOR, "up")
+        x += triangle_size + gap
+        draw.text((x, center_y), high_text, font=font, fill=HIGH_COLOR, anchor="lm")
+        x += draw.textlength(high_text, font=font) + gap * 2
+        self.draw_triangle(draw, x + triangle_size / 2, center_y, triangle_size, LOW_COLOR, "down")
+        x += triangle_size + gap
+        draw.text((x, center_y), low_text, font=font, fill=LOW_COLOR, anchor="lm")
+
+    def draw_simple_weather(self, image, draw, box, text_color, data, forecast_days):
+        left, top, right, bottom = box
+        width = right - left
+
+        gap = round(width * 0.03)
+        now_w = round(width * 0.34)
+
+        self.draw_simple_now_card(image, draw, (left, top, left + now_w, bottom), text_color, data)
+        self.draw_simple_forecast_list(image, draw, (left + now_w + gap, top, right, bottom), text_color, data['forecast'][1:forecast_days + 1])
+
+    def draw_simple_now_card(self, image, draw, box, text_color, data):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        center_x = left + width / 2
+
+        draw.rounded_rectangle((left, top, right, bottom), radius=round(min(width, height) * 0.06), fill=SIMPLE_CARD_BG)
+
+        label_font = get_font("Jost", max(1, round(width * 0.11)), font_weight="bold")
+        temp_font = get_font("Jost", max(1, round(width * 0.34)), font_weight="bold")
+        unit_font = get_font("Jost", max(1, round(width * 0.14)))
+        hl_font = get_font("Jost", max(1, round(width * 0.13)), font_weight="bold")
+
+        label_h = sum(label_font.getmetrics())
+        icon_size = round(width * 0.4)
+        temp_h = sum(temp_font.getmetrics())
+        hl_h = sum(hl_font.getmetrics())
+        gap1 = round(height * 0.02)
+        gap2 = round(height * 0.01)
+        gap3 = round(height * 0.025)
+
+        total_h = label_h + gap1 + icon_size + gap2 + temp_h + gap3 + hl_h
+        y = top + (height - total_h) / 2
+
+        draw.text((center_x, y), "AHORA", font=label_font, fill=text_color, anchor="ma")
+        y += label_h + gap1
+
+        icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
+        image.paste(icon_img, (round(center_x - icon_size / 2), round(y)), icon_img)
+        y += icon_size + gap2
+
+        temp_text = data['current_temperature']
+        unit_text = data['temperature_unit']
+        temp_w = draw.textlength(temp_text, font=temp_font)
+        unit_w = draw.textlength(unit_text, font=unit_font)
+        x = center_x - (temp_w + unit_w) / 2
+        draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
+        draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
+        y += temp_h + gap3
+
+        today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
+        high_text = f"{today_forecast['high']}°"
+        low_text = f"{today_forecast['low']}°"
+        triangle_size = round(width * 0.06)
+        hl_gap = round(width * 0.02)
+        hl_w = self.high_low_width(draw, high_text, low_text, hl_font, triangle_size, hl_gap)
+        self.draw_high_low(draw, center_x - hl_w / 2, y + hl_h / 2, high_text, low_text, hl_font, triangle_size, hl_gap)
+
+    def draw_simple_forecast_list(self, image, draw, box, text_color, forecast):
+        left, top, right, bottom = box
+        width = right - left
+        n = len(forecast)
+        if n == 0:
+            return
+
+        gap = round((bottom - top) * 0.025)
+        row_h = ((bottom - top) - gap * (n - 1)) / n
+
+        day_font = get_font("Jost", max(1, round(row_h * 0.34)))
+        hl_font = get_font("Jost", max(1, round(row_h * 0.28)), font_weight="bold")
+
+        for i, day in enumerate(forecast):
+            row_top = top + i * (row_h + gap)
+            row_bottom = row_top + row_h
+            row_center_y = row_top + row_h / 2
+            radius = round(row_h * 0.18)
+            draw.rounded_rectangle((left, row_top, right, row_bottom), radius=radius, fill=SIMPLE_CARD_BG)
+
+            pad = round(row_h * 0.15)
+            icon_size = round(row_h * 0.7)
+            icon_img = Image.open(day['icon']).convert("RGBA").resize((icon_size, icon_size))
+            image.paste(icon_img, (round(left + pad), round(row_center_y - icon_size / 2)), icon_img)
+
+            day_x = left + pad + icon_size + round(row_h * 0.2)
+            draw.text((day_x, row_center_y), day['day'], font=day_font, fill=text_color, anchor="lm")
+
+            high_text = f"{day['high']}°"
+            low_text = f"{day['low']}°"
+            triangle_size = round(row_h * 0.2)
+            hl_gap = round(row_h * 0.06)
+            hl_w = self.high_low_width(draw, high_text, low_text, hl_font, triangle_size, hl_gap)
+            self.draw_high_low(draw, right - pad - hl_w, row_center_y, high_text, low_text, hl_font, triangle_size, hl_gap)
+
+    def draw_today_row(self, image, draw, box, text_color, data, show_metrics):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+
+        if show_metrics:
+            icon_col_w = round(width * 0.22)
+            temp_col_w = round(width * 0.28)
+        else:
+            icon_col_w = round(width * 0.35)
+            temp_col_w = width - icon_col_w
+
+        description_font = get_font("Jost", max(1, round(height * 0.12)), font_weight="bold")
+        description_h = sum(description_font.getmetrics())
+
+        icon_size = round(min(icon_col_w, height - description_h) * 0.9)
+        icon_center_x = left + icon_col_w / 2
+        icon_x = round(icon_center_x - icon_size / 2)
+        icon_y = round(top + (height - description_h - icon_size) / 2)
+        icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
+        image.paste(icon_img, (icon_x, icon_y), icon_img)
+        draw.text((icon_center_x, icon_y + icon_size), data['current_description'], font=description_font, fill=text_color, anchor="ma")
+
+        temp_center_x = left + icon_col_w + temp_col_w / 2
+        temp_font = get_font("Jost", max(1, round(height * 0.42)))
+        unit_font = get_font("Jost", max(1, round(height * 0.17)))
+        feels_font = get_font("Jost", max(1, round(height * 0.11)))
+        minmax_font = get_font("Jost", max(1, round(height * 0.13)))
+
+        temp_h = sum(temp_font.getmetrics())
+        feels_h = sum(feels_font.getmetrics())
+        minmax_h = sum(minmax_font.getmetrics())
+        block_h = temp_h + feels_h + minmax_h
+        y = top + (height - block_h) / 2
+
+        temp_text = data['current_temperature']
+        unit_text = data['temperature_unit']
+        temp_w = draw.textlength(temp_text, font=temp_font)
+        unit_w = draw.textlength(unit_text, font=unit_font)
+        x = temp_center_x - (temp_w + unit_w) / 2
+        draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
+        draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
+        y += temp_h
+
+        draw.text((temp_center_x, y), f"Sensación {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
+        y += feels_h
+
+        today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
+        draw.text((temp_center_x, y), f"{today_forecast['high']}° / {today_forecast['low']}°", font=minmax_font, fill=text_color, anchor="ma")
+
+        if show_metrics:
+            metrics_box = (left + icon_col_w + temp_col_w, top, right, bottom)
+            self.draw_data_points_grid(image, draw, metrics_box, text_color, data['data_points'])
+
+    def draw_data_points_grid(self, image, draw, box, text_color, data_points):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        cols = 2
+        rows = math.ceil(len(data_points) / cols)
+        cell_w = width / cols
+        cell_h = height / rows
+
+        label_font = get_font("Jost", max(1, round(cell_h * 0.26)))
+        measure_font = get_font("Jost", max(1, round(cell_h * 0.42)), font_weight="bold")
+        unit_font = get_font("Jost", max(1, round(cell_h * 0.26)))
+
+        for i, dp in enumerate(data_points):
+            col, row = i % cols, i // cols
+            cell_left = left + col * cell_w
+            cell_top = top + row * cell_h
+
+            icon_size = round(min(cell_w * 0.22, cell_h * 0.75))
+            icon_img = Image.open(dp['icon']).convert("RGBA").resize((icon_size, icon_size))
+            icon_x = round(cell_left + cell_w * 0.05)
+            icon_y = round(cell_top + (cell_h - icon_size) / 2)
+            image.paste(icon_img, (icon_x, icon_y), icon_img)
+
+            text_left = icon_x + icon_size + round(cell_w * 0.060)
+
+            label_h = sum(label_font.getmetrics())
+            measure_h = sum(measure_font.getmetrics())
+            y = cell_top + (cell_h - label_h - measure_h) / 2
+
+            draw.text((text_left, y), dp['label'], font=label_font, fill=text_color, anchor="la")
+            y += label_h
+
+            unit_gap = round(cell_w * 0.015)
+            measure_text = str(dp['measurement'])
+            unit_text = dp.get('unit') or ''
+            arrow_text = dp.get('arrow') or ''
+            baseline_y = y + measure_font.getmetrics()[0]
+            x = text_left
+            draw.text((x, y), measure_text, font=measure_font, fill=text_color, anchor="la")
+            measure_w = draw.textlength(measure_text, font=measure_font)
+            x += measure_w
+            if unit_text:
+                x += unit_gap
+                draw.text((x, baseline_y), unit_text, font=unit_font, fill=text_color, anchor="ls")
+                x += draw.textlength(unit_text, font=unit_font)
+            if arrow_text:
+                x += unit_gap
+                draw.text((x, baseline_y), arrow_text, font=measure_font, fill=text_color, anchor="ls")
+
+    def draw_hourly_chart(self, image, draw, box, text_color, hourly_forecast, show_rain, show_graph_icons, icon_step):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        n = len(hourly_forecast)
+        if n == 0:
+            return
+
+        unit = min(width, height) / 100
+        label_font = get_font("Jost", max(1, round(height * 0.09)))
+
+        temps = [h['temperature'] for h in hourly_forecast]
+        min_temp, max_temp = min(temps), max(temps)
+        if min_temp == max_temp:
+            max_temp = min_temp + 1
+
+        left_margin = round(draw.textlength(f"{max_temp}°", font=label_font)) + round(unit * 3)
+        right_margin = round(draw.textlength("100%", font=label_font)) + round(unit * 3)
+
+        label_h = sum(label_font.getmetrics())
+        top_margin = label_h + round(unit * 1.5)
+        axis_bottom_h = label_h + round(unit * 0.5)
+        hour_label_h = label_h + round(unit * 1.5)
+        bottom_margin = axis_bottom_h + hour_label_h
+        icon_margin = round(height * 0.22) if show_graph_icons else 0
+
+        plot_left = left + left_margin
+        plot_right = right - right_margin
+        plot_top = top + top_margin
+        plot_bottom = bottom - bottom_margin - icon_margin
+        plot_width = plot_right - plot_left
+        plot_height = plot_bottom - plot_top
+        if plot_width <= 0 or plot_height <= 0:
+            return
+
+        def x_for(i):
+            return plot_left + plot_width * i / max(1, n - 1)
+
+        def y_for_temp(t):
+            return plot_bottom - (t - min_temp) / (max_temp - min_temp) * plot_height
+
+        # Precipitation probability bars
+        bar_color = (26, 111, 176, 200)
+        bar_width = max(1, plot_width / n * 0.9)
+        for i, h in enumerate(hourly_forecast):
+            pct = h.get('precipitation') or 0
+            bar_h = pct * plot_height
+            if bar_h <= 0:
+                continue
+            x = x_for(i)
+            bar_top_y = plot_bottom - bar_h
+            draw.rectangle((x - bar_width / 2, bar_top_y, x + bar_width / 2, plot_bottom), fill=bar_color)
+
+        # Temperature line (envelope only, no fill, so it doesn't compete
+        # visually with the precipitation bars underneath it)
+        points = [(x_for(i), y_for_temp(h['temperature'])) for i, h in enumerate(hourly_forecast)]
+        draw.line(points, fill=(241, 122, 36, 255), width=max(2, round(unit * 0.4)), joint="curve")
+
+        # Axis labels live in their own reserved margins, above/below the
+        # plot area, so bars/line never cover them.
+        axis_gap = round(unit * 0.5)
+        draw.text((left, top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((left, plot_bottom + axis_gap), f"{min_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((right, top), "100%", font=label_font, fill=text_color, anchor="ra")
+        draw.text((right, plot_bottom + axis_gap), "0%", font=label_font, fill=text_color, anchor="ra")
+
+        # Hour labels, skipping enough to avoid overlap
+        label_w = draw.textlength("00:00", font=label_font)
+        max_labels = max(1, int(plot_width / (label_w * 2.2)))
+        label_step = max(1, round(n / max_labels))
+        hour_label_y = plot_bottom + axis_bottom_h + axis_gap
+        for i in range(0, n, label_step):
+            draw.text((x_for(i), hour_label_y), hourly_forecast[i]['time'], font=label_font, fill=text_color, anchor="ma")
+
+        if show_rain:
+            rain_font = get_font("Jost", max(1, round(height * 0.07)))
+            threshold = 0.09
+            for i, h in enumerate(hourly_forecast):
+                rain_mm = h.get('rain') or 0
+                if rain_mm > threshold:
+                    pct = h.get('precipitation') or 0
+                    bar_top_y = plot_bottom - pct * plot_height
+                    draw.text((x_for(i), bar_top_y - round(unit)), f"{rain_mm:.2f}mm", font=rain_font, fill=text_color, anchor="ms")
+
+        if show_graph_icons:
+            icon_size = round(icon_margin * 0.8)
+            if icon_size > 0:
+                icon_cache = {}
+                icon_y = round(plot_bottom + bottom_margin + round(unit))
+                for i in range(0, n, max(1, icon_step)):
+                    icon_path = hourly_forecast[i]['icon']
+                    icon_img = icon_cache.get(icon_path)
+                    if icon_img is None:
+                        icon_img = Image.open(icon_path).convert("RGBA").resize((icon_size, icon_size))
+                        icon_cache[icon_path] = icon_img
+                    icon_x = round(x_for(i) - icon_size / 2)
+                    image.paste(icon_img, (icon_x, icon_y), icon_img)
+
+    def draw_forecast_row(self, image, draw, box, text_color, forecast, show_moon):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        n = len(forecast)
+        if n == 0:
+            return
+
+        gap = round(width * 0.015)
+        card_w = (width - gap * (n - 1)) / n
+        border_radius = round(min(card_w, height) * 0.08)
+        border_width = max(1, round(width * 0.0015))
+
+        day_font = get_font("Jost", max(1, round(height * 0.13)), font_weight="bold")
+        temp_font = get_font("Jost", max(1, round(height * 0.1)))
+        moon_font = get_font("Jost", max(1, round(height * 0.09)))
+
+        for i, day in enumerate(forecast):
+            card_left = left + i * (card_w + gap)
+            card_right = card_left + card_w
+            center_x = card_left + card_w / 2
+            draw.rounded_rectangle((card_left, top, card_right, bottom), radius=border_radius, outline=text_color, width=border_width)
+
+            pad = round(card_w * 0.08)
+            inner_left = card_left + pad
+            inner_right = card_right - pad
+            inner_w = inner_right - inner_left
+
+            y = top + pad
+            draw.text((center_x, y), day['day'], font=day_font, fill=text_color, anchor="ma")
+            y += sum(day_font.getmetrics())
+
+            icon_size = round(min(inner_w, height * 0.32))
+            icon_img = Image.open(day['icon']).convert("RGBA").resize((icon_size, icon_size))
+            image.paste(icon_img, (round(center_x - icon_size / 2), round(y)), icon_img)
+            y += icon_size
+
+            draw.text((center_x, y), f"{day['high']}° / {day['low']}°", font=temp_font, fill=text_color, anchor="ma")
+            y += sum(temp_font.getmetrics())
+
+            if show_moon:
+                y += round(height * 0.02)
+                draw.line((inner_left, y, inner_right, y), fill=text_color, width=1)
+                y += round(height * 0.03)
+                moon_icon_size = round(height * 0.14)
+                moon_icon = Image.open(day['moon_phase_icon']).convert("RGBA").resize((moon_icon_size, moon_icon_size))
+                moon_text = f"{day['moon_phase_pct']} %"
+                moon_text_w = draw.textlength(moon_text, font=moon_font)
+                total_w = moon_icon_size + round(card_w * 0.03) + moon_text_w
+                x = center_x - total_w / 2
+                image.paste(moon_icon, (round(x), round(y)), moon_icon)
+                draw.text((x + moon_icon_size + round(card_w * 0.03), y + moon_icon_size / 2), moon_text, font=moon_font, fill=text_color, anchor="lm")
+
+    def parse_open_meteo_data(self, weather_data, aqi_data, tz, time_format, lat):
         current = weather_data.get("current", {})
         daily = weather_data.get('daily', {})
-        dt = datetime.fromisoformat(current.get('time')).astimezone(tz) if current.get('time') else datetime.now(tz)
+        dt = parse_open_meteo_dt(current.get('time'), tz) if current.get('time') else datetime.now(tz)
         weather_code = current.get("weather_code", 0)
         is_day = current.get("is_day", 1)
         current_icon = self.map_weather_code_to_icon(weather_code, is_day)
-        
-        temperature_conversion = 273.15 if units == "standard" else 0.
 
         data = {
-            "current_date": dt.strftime("%A, %B %d"),
+            "current_date": f"{WEEKDAYS_ES_LONG[dt.weekday()]}, {dt.day} de {MONTHS_ES[dt.month - 1]}",
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
-            "current_temperature": str(round(current.get("temperature", 0) + temperature_conversion)),
-            "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)) + temperature_conversion)),
-            "temperature_unit": UNITS[units]["temperature"],
-            "units": units,
+            "current_description": self.map_weather_code_to_description(weather_code),
+            "current_temperature": str(round(current.get("temperature", 0))),
+            "feels_like": str(round(current.get("apparent_temperature", current.get("temperature", 0)))),
+            "temperature_unit": TEMPERATURE_UNIT,
             "time_format": time_format
         }
 
-        data['forecast'] = self.parse_open_meteo_forecast(weather_data.get('daily', {}), units, tz, is_day, lat)
-        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, units, tz, time_format)
-        
-        data['hourly_forecast'] = self.parse_open_meteo_hourly(weather_data.get('hourly', {}), units, tz, time_format, daily.get('sunrise', []), daily.get('sunset', []))
+        data['forecast'] = self.parse_open_meteo_forecast(weather_data.get('daily', {}), tz, is_day, lat)
+        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, tz, time_format)
+
+        data['hourly_forecast'] = self.parse_open_meteo_hourly(weather_data.get('hourly', {}), tz, time_format, daily.get('sunrise', []), daily.get('sunset', []))
         return data
 
     def map_weather_code_to_icon(self, weather_code, is_day):
@@ -241,6 +621,43 @@ class Weather(BasePlugin):
 
         return icon
 
+    def map_weather_code_to_description(self, weather_code):
+        if weather_code in [0]:   # Clear sky
+            return "Cielo despejado"
+        elif weather_code in [1]: # Mainly clear
+            return "Mayormente despejado"
+        elif weather_code in [2]: # Partly cloudy
+            return "Parcialmente nublado"
+        elif weather_code in [3]: # Overcast
+            return "Nublado"
+        elif weather_code in [51, 61, 80]: # Drizzle, showers, rain: Light
+            return "Lluvia ligera"
+        elif weather_code in [53, 63, 81]: # Drizzle, showers, rain: Moderate
+            return "Lluvia moderada"
+        elif weather_code in [55, 65, 82]: # Drizzle, showers, rain: Heavy
+            return "Lluvia intensa"
+        elif weather_code in [45]: # Fog
+            return "Niebla"
+        elif weather_code in [48]: # Icy fog
+            return "Niebla helada"
+        elif weather_code in [56, 66]: # Light freezing drizzle
+            return "Llovizna helada ligera"
+        elif weather_code in [57, 67]: # Freezing drizzle
+            return "Llovizna helada"
+        elif weather_code in [71, 85]: # Snow fall: Slight
+            return "Nieve ligera"
+        elif weather_code in [73]:     # Snow fall: Moderate
+            return "Nieve moderada"
+        elif weather_code in [75, 86]: # Snow fall: Heavy
+            return "Nieve intensa"
+        elif weather_code in [77]:     # Snow grain
+            return "Granos de nieve"
+        elif weather_code in [95]: # Thunderstorm
+            return "Tormenta"
+        elif weather_code in [96, 99]: # Thunderstorm with slight and heavy hail
+            return "Tormenta con granizo"
+        return "Cielo despejado"
+
     def get_moon_phase_icon_path(self, phase_name: str, lat: float) -> str:
         """Determines the path to the moon icon, inverting it if the location is in the Southern Hemisphere."""
         # Waxing, Waning, First and Last quarter phases are inverted between hemispheres.
@@ -260,73 +677,7 @@ class Weather(BasePlugin):
         
         return self.get_plugin_dir(f"icons/{phase_name}.png")
 
-    def parse_forecast(self, daily_forecast, tz, current_suffix, lat):
-        """
-        - daily_forecast: list of daily entries from One‑Call v3 (each has 'dt', 'weather', 'temp', 'moon_phase')
-        - tz: your target tzinfo (e.g. from zoneinfo or pytz)
-        """
-        PHASES = [
-            (0.0, "newmoon"),
-            (0.25, "firstquarter"),
-            (0.5, "fullmoon"),
-            (0.75, "lastquarter"),
-            (1.0, "newmoon"),
-        ]
-
-        def choose_phase_name(phase: float) -> str:
-            for target, name in PHASES:
-                if math.isclose(phase, target, abs_tol=1e-3):
-                    return name
-            if 0.0 < phase < 0.25:
-                return "waxingcrescent"
-            elif 0.25 < phase < 0.5:
-                return "waxinggibbous"
-            elif 0.5 < phase < 0.75:
-                return "waninggibbous"
-            else:
-                return "waningcrescent"
-
-        forecast = []
-        icon_codes_to_apply_current_suffix = ["01", "02", "10"]
-        for day in daily_forecast:
-            # --- weather icon ---
-            weather_icon = day["weather"][0]["icon"]  # e.g. "10d", "01n"
-            icon_code = weather_icon[:2]
-            if icon_code in icon_codes_to_apply_current_suffix:
-                weather_icon_base = weather_icon[:-1]
-                weather_icon = weather_icon_base + current_suffix
-            else:
-                if weather_icon.endswith('n'):
-                    weather_icon = weather_icon.replace("n", "d")
-            weather_icon = f"{icon_code}d"        
-            weather_icon_path = self.get_plugin_dir(f"icons/{weather_icon}.png")
-
-            # --- moon phase & icon ---
-            moon_phase = float(day["moon_phase"])  # [0.0–1.0]
-            phase_name_north_hemi = choose_phase_name(moon_phase)
-            moon_icon_path = self.get_moon_phase_icon_path(phase_name_north_hemi, lat)
-            # --- true illumination percent, no decimals ---
-            illum_fraction = (1 - math.cos(2 * math.pi * moon_phase)) / 2
-            moon_pct = f"{illum_fraction * 100:.0f}"
-
-            # --- date & temps ---
-            dt = datetime.fromtimestamp(day["dt"], tz=timezone.utc).astimezone(tz)
-            day_label = dt.strftime("%a")
-
-            forecast.append(
-                {
-                    "day": day_label,
-                    "high": int(day["temp"]["max"]),
-                    "low": int(day["temp"]["min"]),
-                    "icon": weather_icon_path,
-                    "moon_phase_pct": moon_pct,
-                    "moon_phase_icon": moon_icon_path,
-                }
-            )
-
-        return forecast
-        
-    def parse_open_meteo_forecast(self, daily_data, units, tz, is_day, lat):
+    def parse_open_meteo_forecast(self, daily_data, tz, is_day, lat):
         """
         Parse the daily forecast from Open-Meteo API and calculate moon phase and illumination using the local 'astral' library.
         """
@@ -334,21 +685,17 @@ class Weather(BasePlugin):
         weather_codes = daily_data.get('weathercode', [])
         temp_max = daily_data.get('temperature_2m_max', [])
         temp_min = daily_data.get('temperature_2m_min', [])
-        if units == "standard":
-            temp_max = [T + 273.15 for T in temp_max]
-            temp_min = [T + 273.15 for T in temp_min]
 
         forecast = []
 
         for i in range(0, len(times)): 
-            dt = datetime.fromisoformat(times[i]).replace(tzinfo=timezone.utc).astimezone(tz)
-            day_label = dt.strftime("%a")
+            dt = parse_open_meteo_dt(times[i], tz)
+            day_label = WEEKDAYS_ES[dt.weekday()]
 
             code = weather_codes[i] if i < len(weather_codes) else 0
             weather_icon = self.map_weather_code_to_icon(code, is_day=1)
             weather_icon_path = self.get_plugin_dir(f"icons/{weather_icon}.png")
 
-            timestamp = int(dt.replace(hour=12, minute=0, second=0).timestamp())
             target_date: date = dt.date() + timedelta(days=1)
 
             try:
@@ -374,65 +721,25 @@ class Weather(BasePlugin):
 
         return forecast
 
-    def parse_hourly(self, hourly_forecast, tz, time_format, units, daily_forecast):
-        hourly = []
-        icon_codes_to_preserve = ["01", "02", "10"]
-        
-        sun_map = {}
-        for day in daily_forecast:
-            day_date = datetime.fromtimestamp(day['dt'], tz=timezone.utc).astimezone(tz).date()
-            sun_map[day_date] = (day['sunrise'], day['sunset'])
-        
-        for hour in hourly_forecast[:24]:
-            dt_epoch = hour.get('dt')
-            dt = datetime.fromtimestamp(dt_epoch, tz=timezone.utc).astimezone(tz)
-            rain_mm = hour.get("rain", {}).get("1h", 0.0)
-            snow_mm = hour.get("snow", {}).get("1h", 0.0)
-            total_precip_mm = rain_mm + snow_mm
-            sunrise, sunset = sun_map.get(dt.date(), (0, 0))
-        
-            is_day = sunrise <= dt_epoch < sunset
-            suffix = 'd' if is_day else 'n'
-        
-            raw_icon = hour.get("weather", [{}])[0].get("icon", "01d")
-            icon_base = raw_icon[:2]
-            icon_name = f"{icon_base}{suffix}" if icon_base in icon_codes_to_preserve else f"{icon_base}d"
-            
-            if units == "imperial":
-                precip_value = total_precip_mm / 25.4
-            else:
-                precip_value = total_precip_mm 
-            hour_forecast = {
-                "time": self.format_time(dt, time_format, hour_only=True),
-                "temperature": int(hour.get("temp")),
-                "precipitation": hour.get("pop"),
-                "rain": round(precip_value, 2),
-                "icon": self.get_plugin_dir(f'icons/{icon_name}.png')
-            }
-            hourly.append(hour_forecast)
-        return hourly
-
-    def parse_open_meteo_hourly(self, hourly_data, units, tz, time_format, sunrises, sunsets):
+    def parse_open_meteo_hourly(self, hourly_data, tz, time_format, sunrises, sunsets):
         hourly = []
         times = hourly_data.get('time', [])
         temperatures = hourly_data.get('temperature_2m', [])
-        if units == "standard":
-            temperatures = [temperature + 273.15 for temperature in temperatures]
         precipitation_probabilities = hourly_data.get('precipitation_probability', [])
         rain = hourly_data.get('precipitation', [])
         codes = hourly_data.get('weather_code', [])
         
         sun_map = {}
         for sr_s, ss_s in zip(sunrises, sunsets):
-            sr_dt = datetime.fromisoformat(sr_s).astimezone(tz)
-            ss_dt = datetime.fromisoformat(ss_s).astimezone(tz)
+            sr_dt = parse_open_meteo_dt(sr_s, tz)
+            ss_dt = parse_open_meteo_dt(ss_s, tz)
             sun_map[sr_dt.date()] = (sr_dt, ss_dt)
         
         current_time_in_tz = datetime.now(tz)
         start_index = 0
         for i, time_str in enumerate(times):
             try:
-                dt_hourly = datetime.fromisoformat(time_str).astimezone(tz)
+                dt_hourly = parse_open_meteo_dt(time_str, tz)
                 if dt_hourly.date() == current_time_in_tz.date() and dt_hourly.hour >= current_time_in_tz.hour:
                     start_index = i
                     break
@@ -449,7 +756,7 @@ class Weather(BasePlugin):
         sliced_codes = codes[start_index:]
 
         for i in range(min(24, len(sliced_times))):
-            dt = datetime.fromisoformat(sliced_times[i]).astimezone(tz)
+            dt = parse_open_meteo_dt(sliced_times[i], tz)
             sunrise, sunset = sun_map.get(dt.date(), (None, None))
             is_day = 0
             if sunrise and sunset:
@@ -466,94 +773,7 @@ class Weather(BasePlugin):
             hourly.append(hour_forecast)
         return hourly
 
-    def parse_data_points(self, weather, air_quality, tz, units, time_format):
-        data_points = []
-        sunrise_epoch = weather.get('current', {}).get("sunrise")
-
-        if sunrise_epoch:
-            sunrise_dt = datetime.fromtimestamp(sunrise_epoch, tz=timezone.utc).astimezone(tz)
-            data_points.append({
-                "label": "Sunrise",
-                "measurement": self.format_time(sunrise_dt, time_format, include_am_pm=False),
-                "unit": "" if time_format == "24h" else sunrise_dt.strftime('%p'),
-                "icon": self.get_plugin_dir('icons/sunrise.png')
-            })
-        else:
-            logger.error(f"Sunrise not found in OpenWeatherMap response, this is expected for polar areas in midnight sun and polar night periods.")
-
-        sunset_epoch = weather.get('current', {}).get("sunset")
-        if sunset_epoch:
-            sunset_dt = datetime.fromtimestamp(sunset_epoch, tz=timezone.utc).astimezone(tz)
-            data_points.append({
-                "label": "Sunset",
-                "measurement": self.format_time(sunset_dt, time_format, include_am_pm=False),
-                "unit": "" if time_format == "24h" else sunset_dt.strftime('%p'),
-                "icon": self.get_plugin_dir('icons/sunset.png')
-            })
-        else:
-            logger.error(f"Sunset not found in OpenWeatherMap response, this is expected for polar areas in midnight sun and polar night periods.")
-
-        wind_deg = weather.get('current', {}).get("wind_deg", 0)
-        wind_arrow = self.get_wind_arrow(wind_deg)
-        data_points.append({
-            "label": "Wind",
-            "measurement": weather.get('current', {}).get("wind_speed"),
-            "unit": UNITS[units]["speed"],
-            "icon": self.get_plugin_dir('icons/wind.png'),
-            "arrow": wind_arrow
-        })
-
-        data_points.append({
-            "label": "Humidity",
-            "measurement": weather.get('current', {}).get("humidity"),
-            "unit": '%',
-            "icon": self.get_plugin_dir('icons/humidity.png')
-        })
-
-        data_points.append({
-            "label": "Pressure",
-            "measurement": weather.get('current', {}).get("pressure"),
-            "unit": 'hPa',
-            "icon": self.get_plugin_dir('icons/pressure.png')
-        })
-
-        data_points.append({
-            "label": "UV Index",
-            "measurement": weather.get('current', {}).get("uvi"),
-            "unit": '',
-            "icon": self.get_plugin_dir('icons/uvi.png')
-        })
-
-        visibility = weather.get('current', {}).get("visibility")
-        if units == "imperial":
-            # convert from m to mi
-            visibility /= 1609.
-            at_max_visibility = visibility >= 6.2
-        else:
-            # convert from m to km
-            visibility /= 1000.
-            at_max_visibility = visibility >= 10
-        visibility_str = f"{visibility:.1f}"
-        if at_max_visibility:
-            visibility_str = u"\u2265" + visibility_str
-        data_points.append({
-            "label": "Visibility",
-            "measurement": visibility_str,
-            "unit": UNITS[units]["distance"],
-            "icon": self.get_plugin_dir('icons/visibility.png')
-        })
-
-        aqi = air_quality.get('list', [])[0].get("main", {}).get("aqi")
-        data_points.append({
-            "label": "Air Quality",
-            "measurement": aqi,
-            "unit": ["Good", "Fair", "Moderate", "Poor", "Very Poor"][int(aqi)-1],
-            "icon": self.get_plugin_dir('icons/aqi.png')
-        })
-
-        return data_points
-
-    def parse_open_meteo_data_points(self, weather_data, aqi_data, units, tz, time_format):
+    def parse_open_meteo_data_points(self, weather_data, aqi_data, tz, time_format):
         """Parses current data points from Open-Meteo API response."""
         data_points = []
         daily_data = weather_data.get('daily', {})
@@ -565,9 +785,9 @@ class Weather(BasePlugin):
         # Sunrise
         sunrise_times = daily_data.get('sunrise', [])
         if sunrise_times:
-            sunrise_dt = datetime.fromisoformat(sunrise_times[0]).astimezone(tz)
+            sunrise_dt = parse_open_meteo_dt(sunrise_times[0], tz)
             data_points.append({
-                "label": "Sunrise",
+                "label": "Amanecer",
                 "measurement": self.format_time(sunrise_dt, time_format, include_am_pm=False),
                 "unit": "" if time_format == "24h" else sunrise_dt.strftime('%p'),
                 "icon": self.get_plugin_dir('icons/sunrise.png')
@@ -578,9 +798,9 @@ class Weather(BasePlugin):
         # Sunset
         sunset_times = daily_data.get('sunset', [])
         if sunset_times:
-            sunset_dt = datetime.fromisoformat(sunset_times[0]).astimezone(tz)
+            sunset_dt = parse_open_meteo_dt(sunset_times[0], tz)
             data_points.append({
-                "label": "Sunset",
+                "label": "Atardecer",
                 "measurement": self.format_time(sunset_dt, time_format, include_am_pm=False),
                 "unit": "" if time_format == "24h" else sunset_dt.strftime('%p'),
                 "icon": self.get_plugin_dir('icons/sunset.png')
@@ -592,113 +812,82 @@ class Weather(BasePlugin):
         wind_speed = current_data.get("windspeed", 0)
         wind_deg = current_data.get("winddirection", 0)
         wind_arrow = self.get_wind_arrow(wind_deg)
-        wind_unit = UNITS[units]["speed"]
+        wind_unit = SPEED_UNIT
         data_points.append({
-            "label": "Wind", "measurement": wind_speed, "unit": wind_unit,
+            "label": "Viento", "measurement": wind_speed, "unit": wind_unit,
             "icon": self.get_plugin_dir('icons/wind.png'), "arrow": wind_arrow
         })
 
+        # humidity, pressure and visibility all share weather_data's hourly
+        # time array, and UV index/AQI both share aqi_data's \u2014 find each
+        # array's "current hour" index once instead of re-parsing it per field.
+        weather_hour_index = self.find_current_hour_index(hourly_data.get('time', []), tz, current_time)
+        aqi_hour_index = self.find_current_hour_index(aqi_data.get('hourly', {}).get('time', []), tz, current_time)
+
         # Humidity
-        current_humidity = "N/A"
-        humidity_hourly_times = hourly_data.get('time', [])
         humidity_values = hourly_data.get('relative_humidity_2m', [])
-        for i, time_str in enumerate(humidity_hourly_times):
-            try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_humidity = int(humidity_values[i])
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for humidity.")
-                continue
+        current_humidity = int(humidity_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
-            "label": "Humidity", "measurement": current_humidity, "unit": '%',
+            "label": "Humedad", "measurement": current_humidity, "unit": '%',
             "icon": self.get_plugin_dir('icons/humidity.png')
         })
 
         # Pressure
-        current_pressure = "N/A"
-        pressure_hourly_times = hourly_data.get('time', [])
         pressure_values = hourly_data.get('surface_pressure', [])
-        for i, time_str in enumerate(pressure_hourly_times):
-            try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_pressure = int(pressure_values[i])
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for pressure.")
-                continue
+        current_pressure = int(pressure_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
-            "label": "Pressure", "measurement": current_pressure, "unit": 'hPa',
+            "label": "Presión", "measurement": current_pressure, "unit": 'hPa',
             "icon": self.get_plugin_dir('icons/pressure.png')
         })
 
         # UV Index
-        uv_index_hourly_times = aqi_data.get('hourly', {}).get('time', [])
         uv_index_values = aqi_data.get('hourly', {}).get('uv_index', [])
-        current_uv_index = "N/A"
-        for i, time_str in enumerate(uv_index_hourly_times):
-            try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_uv_index = uv_index_values[i]
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for UV Index.")
-                continue
+        current_uv_index = uv_index_values[aqi_hour_index] if aqi_hour_index is not None else "N/A"
         data_points.append({
-            "label": "UV Index", "measurement": current_uv_index, "unit": '',
+            "label": "Índice UV", "measurement": current_uv_index, "unit": '',
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
         # Visibility
-        current_visibility = "N/A"
-        visibility_hourly_times = hourly_data.get('time', [])
         visibility_values = hourly_data.get('visibility', [])
-        if units == "imperial":
-            visibility_conversion = 1/5280.     # ft to mi
-            visibility_max = 6.2                # mi
+        visibility_conversion = 0.001  # m to km
+        visibility_max = 10.  # km
+        if weather_hour_index is None:
+            visibility_str = "N/A"
         else:
-            visibility_conversion = 0.001       # m to km
-            visibility_max = 10.                # km
-        for i, time_str in enumerate(visibility_hourly_times):
-            try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_visibility = visibility_values[i]*visibility_conversion
-                    at_max_visibility = current_visibility >= visibility_max
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for visibility.")
-                continue
-        visibility_str = f"{current_visibility:.1f}"
-        if at_max_visibility:
-            visibility_str = u"\u2265" + visibility_str
+            current_visibility = visibility_values[weather_hour_index] * visibility_conversion
+            visibility_str = f"{current_visibility:.1f}"
+            if current_visibility >= visibility_max:
+                visibility_str = u"\u2265" + visibility_str
         data_points.append({
-            "label": "Visibility", 
-            "measurement": visibility_str, 
-            "unit": UNITS[units]["distance"],
+            "label": "Visibilidad",
+            "measurement": visibility_str,
+            "unit": DISTANCE_UNIT,
             "icon": self.get_plugin_dir('icons/visibility.png')
         })
 
         # Air Quality
-        aqi_hourly_times = aqi_data.get('hourly', {}).get('time', [])
         aqi_values = aqi_data.get('hourly', {}).get('european_aqi', [])
-        current_aqi = "N/A"
-        for i, time_str in enumerate(aqi_hourly_times):
-            try:
-                if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_aqi = round(aqi_values[i], 1)
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for AQI.")
-                continue
+        current_aqi = round(aqi_values[aqi_hour_index], 1) if aqi_hour_index is not None else "N/A"
         scale = ""
         if current_aqi and current_aqi != "N/A":
-            scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(current_aqi//20,5)]
+            scale = ["Buena","Aceptable","Moderada","Mala","Muy mala","Pésima"][min(int(current_aqi//20), 5)]
         data_points.append({
-            "label": "Air Quality", "measurement": current_aqi,
+            "label": "Calidad del aire", "measurement": current_aqi,
             "unit": scale, "icon": self.get_plugin_dir('icons/aqi.png')
         })
 
         return data_points
+
+    def find_current_hour_index(self, times, tz, current_time):
+        for i, time_str in enumerate(times):
+            try:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
+                    return i
+            except ValueError:
+                logger.warning(f"Could not parse time string {time_str}.")
+                continue
+        return None
 
     def get_wind_arrow(self, wind_deg: float) -> str:
         DIRECTIONS = [
@@ -719,46 +908,13 @@ class Weather(BasePlugin):
 
         return "↑"
 
-    def get_weather_data(self, api_key, units, lat, long):
-        url = WEATHER_URL.format(lat=lat, long=long, units=units, api_key=api_key)
-        response = requests.get(url, timeout=30)
-        if not 200 <= response.status_code < 300:
-            logger.error(f"Failed to retrieve weather data: {response.content}")
-            raise RuntimeError("Failed to retrieve weather data.")
-
-        return response.json()
-
-    def get_air_quality(self, api_key, lat, long):
-        url = AIR_QUALITY_URL.format(lat=lat, long=long, api_key=api_key)
-        response = requests.get(url, timeout=30)
-
-        if not 200 <= response.status_code < 300:
-            logger.error(f"Failed to get air quality data: {response.content}")
-            raise RuntimeError("Failed to retrieve air quality data.")
-
-        return response.json()
-
-    def get_location(self, api_key, lat, long):
-        url = GEOCODING_URL.format(lat=lat, long=long, api_key=api_key)
-        response = requests.get(url, timeout=30)
-
-        if not 200 <= response.status_code < 300:
-            logger.error(f"Failed to get location: {response.content}")
-            raise RuntimeError("Failed to retrieve location.")
-
-        location_data = response.json()[0]
-        location_str = f"{location_data.get('name')}, {location_data.get('state', location_data.get('country'))}"
-
-        return location_str
-
-    def get_open_meteo_data(self, lat, long, units, forecast_days):
-        unit_params = OPEN_METEO_UNIT_PARAMS[units]
-        url = OPEN_METEO_FORECAST_URL.format(lat=lat, long=long, forecast_days=forecast_days) + f"&{unit_params}"
+    def get_open_meteo_data(self, lat, long, forecast_days):
+        url = OPEN_METEO_FORECAST_URL.format(lat=lat, long=long, forecast_days=forecast_days)
         response = requests.get(url, timeout=30)
 
         if not 200 <= response.status_code < 300:
             logger.error(f"Failed to retrieve Open-Meteo weather data: {response.content}")
-            raise RuntimeError("Failed to retrieve Open-Meteo weather data.")
+            raise RuntimeError("No se han podido obtener los datos meteorológicos de Open-Meteo.")
         
         return response.json()
 
@@ -767,7 +923,7 @@ class Weather(BasePlugin):
         response = requests.get(url, timeout=30)
         if not 200 <= response.status_code < 300:
             logger.error(f"Failed to retrieve Open-Meteo air quality data: {response.content}")
-            raise RuntimeError("Failed to retrieve Open-Meteo air quality data.")
+            raise RuntimeError("No se han podido obtener los datos de calidad del aire de Open-Meteo.")
         
         return response.json()
     
@@ -782,12 +938,3 @@ class Weather(BasePlugin):
             fmt = "%I" if hour_only else "%I:%M"
 
         return dt.strftime(fmt).lstrip("0")
-    
-    def parse_timezone(self, weatherdata):
-        """Parse timezone from weather data"""
-        if 'timezone' in weatherdata:
-            logger.info(f"Using timezone from weather data: {weatherdata['timezone']}")
-            return pytz.timezone(weatherdata['timezone'])
-        else:
-            logger.error("Failed to retrieve Timezone from weather data")
-            raise RuntimeError("Timezone not found in weather data.")
