@@ -147,55 +147,12 @@ class Clock(BasePlugin):
             l, t, r, b = text_draw.textbbox((0, 0), label, font=footer_font, anchor="ls")
             return -t, b
 
-        remaining_str = day_progress[1] if day_progress else None
-
-        # Lay out the footer bottom-up from a reference baseline y0, returning
-        # each element's position plus the top/bottom ink edges of the whole
-        # block. Called once to measure (y0=0) and once to actually draw.
-        def layout_footer(y0):
-            positions = {}
-            y = y0
-            top = y0
-            if day_progress:
-                remaining_ascent, remaining_descent = ink_extents(remaining_str)
-                positions['remaining_baseline'] = y
-                top = y - remaining_ascent
-                bar_bottom = top - gap
-                bar_top = bar_bottom - bar_height
-                positions['bar_top'] = bar_top
-                top = bar_top
-                if date_str:
-                    date_ascent, date_descent = ink_extents(date_str)
-                    date_ink_bottom = bar_top - gap
-                    date_baseline = date_ink_bottom - date_descent
-                    positions['date_baseline'] = date_baseline
-                    top = date_baseline - date_ascent
-                bottom = y0 + remaining_descent
-            elif date_str:
-                date_ascent, date_descent = ink_extents(date_str)
-                positions['date_baseline'] = y0
-                top = y0 - date_ascent
-                bottom = y0 + date_descent
-            else:
-                bottom = y0
-            return positions, top, bottom
-
         # DS-Digital's own ascent/descent metrics don't match its actual ink,
-        # so measure the drawn glyphs directly to center the whole composition
-        # (digits + optional footer) instead of just the digits on their own.
+        # so measure the drawn glyphs directly to center them on the canvas.
         digit_left, digit_top, digit_right, digit_bottom = text_draw.textbbox((w/2, h/2), "00:00", font=fnt, anchor="mm")
-        digit_height = digit_bottom - digit_top
         digit_anchor_offset = (digit_top + digit_bottom) / 2 - h/2
-
-        has_footer = bool(day_progress or date_str)
-        _, footer_top_at_0, footer_bottom_at_0 = layout_footer(0) if has_footer else ({}, 0, 0)
-        footer_height = footer_bottom_at_0 - footer_top_at_0
-
-        footer_gap = round(h * 0.04) if has_footer else 0
-        total_height = digit_height + footer_gap + footer_height
-        content_top = (h - total_height) / 2
-
-        digit_center_y = content_top + digit_height / 2 - digit_anchor_offset
+        digit_center_y = h/2 - digit_anchor_offset
+        digit_bottom_y = digit_bottom - digit_anchor_offset
 
         # time text
         text_draw.text((w/2, digit_center_y), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
@@ -206,17 +163,23 @@ class Clock(BasePlugin):
             am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
             draw_letter_spaced_text(text_draw, am_pm, am_pm_font, w - margin, h - margin, primary_color+(255,), round(w * 0.004), align="right")
 
-        if has_footer:
-            footer_bottom = content_top + digit_height + footer_gap + footer_height
-            positions, _, _ = layout_footer(footer_bottom - footer_bottom_at_0)
+        # The date sits right under the digits...
+        if date_str:
+            date_ascent, _ = ink_extents(date_str)
+            date_baseline = digit_bottom_y + round(h * 0.04) + date_ascent
+            draw_letter_spaced_text(text_draw, date_str, footer_font, w/2, date_baseline, primary_color+(255,), letter_spacing, align="center")
 
+        # ...while the day progress bar and its remaining-time caption are
+        # anchored to the bottom edge instead, independent of the date/digits.
         if day_progress:
-            percent, _ = day_progress
-            draw_letter_spaced_text(text_draw, remaining_str, footer_font, w/2, positions['remaining_baseline'], primary_color+(255,), letter_spacing, align="center")
+            percent, remaining_str = day_progress
+            remaining_ascent, _ = ink_extents(remaining_str)
+            remaining_baseline = h - round(h * 0.06)
+            draw_letter_spaced_text(text_draw, remaining_str, footer_font, w/2, remaining_baseline, primary_color+(255,), letter_spacing, align="center")
 
             bar_width = round(w * 0.45)
             bar_left = round(w/2 - bar_width/2)
-            bar_top = round(positions['bar_top'])
+            bar_top = round(remaining_baseline - remaining_ascent - gap - bar_height)
             bar_radius = round(bar_height / 2)
 
             bar_img = Image.new("RGBA", (bar_width, bar_height), (0, 0, 0, 0))
@@ -226,9 +189,6 @@ class Clock(BasePlugin):
             if fill_width > 0:
                 bar_draw.rounded_rectangle((0, 0, max(fill_width, bar_height) - 1, bar_height - 1), radius=bar_radius, fill=primary_color + (255,))
             text.paste(bar_img, (bar_left, bar_top), bar_img)
-
-        if date_str:
-            draw_letter_spaced_text(text_draw, date_str, footer_font, w/2, positions['date_baseline'], primary_color+(255,), letter_spacing, align="center")
 
         combined = Image.alpha_composite(image, text)
 
