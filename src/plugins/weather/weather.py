@@ -49,10 +49,12 @@ class Weather(BasePlugin):
         return template_params
 
     def generate_image(self, settings, device_config):
-        lat = float(settings.get('latitude'))
-        long = float(settings.get('longitude'))
-        if not lat or not long:
+        lat_str = settings.get('latitude')
+        long_str = settings.get('longitude')
+        if not lat_str or not long_str:
             raise RuntimeError("Latitude and Longitude are required.")
+        lat = float(lat_str)
+        long = float(long_str)
 
         title = settings.get('customTitle', '')
 
