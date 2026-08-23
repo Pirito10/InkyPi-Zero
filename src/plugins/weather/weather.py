@@ -328,78 +328,46 @@ class Weather(BasePlugin):
             "icon": self.get_plugin_dir('icons/wind.png'), "arrow": wind_arrow
         })
 
+        # humidity, pressure and visibility all share weather_data's hourly
+        # time array, and UV index/AQI both share aqi_data's \u2014 find each
+        # array's "current hour" index once instead of re-parsing it per field.
+        weather_hour_index = self.find_current_hour_index(hourly_data.get('time', []), tz, current_time)
+        aqi_hour_index = self.find_current_hour_index(aqi_data.get('hourly', {}).get('time', []), tz, current_time)
+
         # Humidity
-        current_humidity = "N/A"
-        humidity_hourly_times = hourly_data.get('time', [])
         humidity_values = hourly_data.get('relative_humidity_2m', [])
-        for i, time_str in enumerate(humidity_hourly_times):
-            try:
-                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
-                    current_humidity = int(humidity_values[i])
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for humidity.")
-                continue
+        current_humidity = int(humidity_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
             "label": "Humidity", "measurement": current_humidity, "unit": '%',
             "icon": self.get_plugin_dir('icons/humidity.png')
         })
 
         # Pressure
-        current_pressure = "N/A"
-        pressure_hourly_times = hourly_data.get('time', [])
         pressure_values = hourly_data.get('surface_pressure', [])
-        for i, time_str in enumerate(pressure_hourly_times):
-            try:
-                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
-                    current_pressure = int(pressure_values[i])
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for pressure.")
-                continue
+        current_pressure = int(pressure_values[weather_hour_index]) if weather_hour_index is not None else "N/A"
         data_points.append({
             "label": "Pressure", "measurement": current_pressure, "unit": 'hPa',
             "icon": self.get_plugin_dir('icons/pressure.png')
         })
 
         # UV Index
-        uv_index_hourly_times = aqi_data.get('hourly', {}).get('time', [])
         uv_index_values = aqi_data.get('hourly', {}).get('uv_index', [])
-        current_uv_index = "N/A"
-        for i, time_str in enumerate(uv_index_hourly_times):
-            try:
-                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
-                    current_uv_index = uv_index_values[i]
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for UV Index.")
-                continue
+        current_uv_index = uv_index_values[aqi_hour_index] if aqi_hour_index is not None else "N/A"
         data_points.append({
             "label": "UV Index", "measurement": current_uv_index, "unit": '',
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
         # Visibility
-        current_visibility = None
-        visibility_hourly_times = hourly_data.get('time', [])
         visibility_values = hourly_data.get('visibility', [])
         visibility_conversion = 0.001  # m to km
         visibility_max = 10.  # km
-        at_max_visibility = False
-        for i, time_str in enumerate(visibility_hourly_times):
-            try:
-                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
-                    current_visibility = visibility_values[i]*visibility_conversion
-                    at_max_visibility = current_visibility >= visibility_max
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for visibility.")
-                continue
-        if current_visibility is None:
+        if weather_hour_index is None:
             visibility_str = "N/A"
         else:
+            current_visibility = visibility_values[weather_hour_index] * visibility_conversion
             visibility_str = f"{current_visibility:.1f}"
-            if at_max_visibility:
+            if current_visibility >= visibility_max:
                 visibility_str = u"\u2265" + visibility_str
         data_points.append({
             "label": "Visibility",
@@ -409,17 +377,8 @@ class Weather(BasePlugin):
         })
 
         # Air Quality
-        aqi_hourly_times = aqi_data.get('hourly', {}).get('time', [])
         aqi_values = aqi_data.get('hourly', {}).get('european_aqi', [])
-        current_aqi = "N/A"
-        for i, time_str in enumerate(aqi_hourly_times):
-            try:
-                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
-                    current_aqi = round(aqi_values[i], 1)
-                    break
-            except ValueError:
-                logger.warning(f"Could not parse time string {time_str} for AQI.")
-                continue
+        current_aqi = round(aqi_values[aqi_hour_index], 1) if aqi_hour_index is not None else "N/A"
         scale = ""
         if current_aqi and current_aqi != "N/A":
             scale = ["Good","Fair","Moderate","Poor","Very Poor","Ext Poor"][min(int(current_aqi//20), 5)]
@@ -429,6 +388,16 @@ class Weather(BasePlugin):
         })
 
         return data_points
+
+    def find_current_hour_index(self, times, tz, current_time):
+        for i, time_str in enumerate(times):
+            try:
+                if parse_open_meteo_dt(time_str, tz).hour == current_time.hour:
+                    return i
+            except ValueError:
+                logger.warning(f"Could not parse time string {time_str}.")
+                continue
+        return None
 
     def get_wind_arrow(self, wind_deg: float) -> str:
         DIRECTIONS = [
