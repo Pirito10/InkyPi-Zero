@@ -1,4 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
+from utils.app_utils import get_font
+from PIL import Image, ImageDraw
+import numpy as np
 import requests
 import logging
 from datetime import datetime, timedelta, date
@@ -66,9 +69,7 @@ class Weather(BasePlugin):
             forecast_days = 7
             weather_data = self.get_open_meteo_data(lat, long, forecast_days + 1)
             aqi_data = self.get_open_meteo_air_quality(lat, long)
-            template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, time_format, lat)
-
-            template_params['title'] = title
+            data = self.parse_open_meteo_data(weather_data, aqi_data, tz, time_format, lat)
         except Exception as e:
             logger.error(f"Open-Meteo request failed: {str(e)}")
             raise RuntimeError("Open-Meteo request failure, please check logs.")
@@ -77,21 +78,335 @@ class Weather(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        template_params["plugin_settings"] = settings
-
-        # Add last refresh time
         now = datetime.now(tz)
         if time_format == "24h":
             last_refresh_time = now.strftime("%Y-%m-%d %H:%M")
         else:
             last_refresh_time = now.strftime("%Y-%m-%d %I:%M %p")
-        template_params["last_refresh_time"] = last_refresh_time
 
-        image = self.render_image(dimensions, "weather.html", "weather.css", template_params)
+        def draw_content(image, draw, content_box, text_color):
+            self.draw_weather_dashboard(image, draw, content_box, text_color, title, data, settings, last_refresh_time)
 
-        if not image:
-            raise RuntimeError("Failed to take screenshot, please check logs.")
-        return image
+        return self.render_image_pil(dimensions, settings, draw_content)
+
+    def draw_weather_dashboard(self, image, draw, content_box, text_color, title, data, settings, last_refresh_time):
+        left, top, right, bottom = content_box
+        width = right - left
+        height = bottom - top
+
+        show_refresh = settings.get('displayRefreshTime') == 'true'
+        show_metrics = settings.get('displayMetrics') == 'true'
+        show_graph = settings.get('displayGraph') == 'true'
+        show_forecast = settings.get('displayForecast') == 'true'
+        show_rain = settings.get('displayRain') == 'true'
+        show_graph_icons = settings.get('displayGraphIcons') == 'true'
+        show_moon = settings.get('moonPhase') == 'true'
+        forecast_days = int(settings.get('forecastDays') or 7)
+        icon_step = int(settings.get('graphIconStep') or 2)
+
+        if show_refresh:
+            refresh_font = get_font("Jost", max(1, round(height * 0.03)), font_weight="bold")
+            draw.text((right, top), f"Last refresh: {last_refresh_time}", font=refresh_font, fill=text_color, anchor="ra")
+
+        gap = round(height * 0.02)
+        chart_h = round(height * 0.24) if show_graph else 0
+        forecast_h = round(height * 0.24) if show_forecast else 0
+        header_h = round(height * 0.15)
+
+        today_h = height - header_h - gap
+        if show_graph:
+            today_h -= chart_h + gap
+        if show_forecast:
+            today_h -= forecast_h + gap
+
+        y = top
+        self.draw_weather_header(draw, (left, y, right, y + header_h), text_color, title, data['current_date'])
+        y += header_h + gap
+
+        self.draw_today_row(image, draw, (left, y, right, y + today_h), text_color, data, show_metrics)
+        y += today_h
+
+        if show_graph:
+            y += gap
+            self.draw_hourly_chart(image, draw, (left, y, right, y + chart_h), text_color, data['hourly_forecast'], show_rain, show_graph_icons, icon_step)
+            y += chart_h
+
+        if show_forecast:
+            y += gap
+            self.draw_forecast_row(image, draw, (left, y, right, y + forecast_h), text_color, data['forecast'][1:forecast_days + 1], show_moon)
+
+    def draw_weather_header(self, draw, box, text_color, title, current_date):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        center_x = left + width / 2
+
+        title_font = get_font("Jost", max(1, round(height * 0.5)), font_weight="bold")
+        date_font = get_font("Jost", max(1, round(height * 0.3)))
+
+        if title:
+            title_h = sum(title_font.getmetrics())
+            date_h = sum(date_font.getmetrics())
+            y = bottom - title_h - date_h
+            draw.text((center_x, y), title, font=title_font, fill=text_color, anchor="ma")
+            y += title_h
+            draw.text((center_x, y), current_date, font=date_font, fill=text_color, anchor="ma")
+        else:
+            date_h = sum(date_font.getmetrics())
+            draw.text((center_x, bottom - date_h), current_date, font=date_font, fill=text_color, anchor="ma")
+
+    def draw_today_row(self, image, draw, box, text_color, data, show_metrics):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+
+        if show_metrics:
+            icon_col_w = round(width * 0.22)
+            temp_col_w = round(width * 0.28)
+        else:
+            icon_col_w = round(width * 0.35)
+            temp_col_w = width - icon_col_w
+
+        icon_size = round(min(icon_col_w, height) * 0.95)
+        icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
+        icon_x = round(left + (icon_col_w - icon_size) / 2)
+        icon_y = round(top + (height - icon_size) / 2)
+        image.paste(icon_img, (icon_x, icon_y), icon_img)
+
+        temp_center_x = left + icon_col_w + temp_col_w / 2
+        temp_font = get_font("Jost", max(1, round(height * 0.42)))
+        unit_font = get_font("Jost", max(1, round(height * 0.17)))
+        feels_font = get_font("Jost", max(1, round(height * 0.11)))
+        minmax_font = get_font("Jost", max(1, round(height * 0.13)))
+
+        temp_h = sum(temp_font.getmetrics())
+        feels_h = sum(feels_font.getmetrics())
+        minmax_h = sum(minmax_font.getmetrics())
+        block_h = temp_h + feels_h + minmax_h
+        y = top + (height - block_h) / 2
+
+        temp_text = data['current_temperature']
+        unit_text = data['temperature_unit']
+        temp_w = draw.textlength(temp_text, font=temp_font)
+        unit_w = draw.textlength(unit_text, font=unit_font)
+        x = temp_center_x - (temp_w + unit_w) / 2
+        draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
+        draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
+        y += temp_h
+
+        draw.text((temp_center_x, y), f"Feels Like {data['feels_like']}°", font=feels_font, fill=text_color, anchor="ma")
+        y += feels_h
+
+        today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
+        draw.text((temp_center_x, y), f"{today_forecast['high']}° / {today_forecast['low']}°", font=minmax_font, fill=text_color, anchor="ma")
+
+        if show_metrics:
+            metrics_box = (left + icon_col_w + temp_col_w, top, right, bottom)
+            self.draw_data_points_grid(image, draw, metrics_box, text_color, data['data_points'])
+
+    def draw_data_points_grid(self, image, draw, box, text_color, data_points):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        cols = 2
+        rows = math.ceil(len(data_points) / cols)
+        cell_w = width / cols
+        cell_h = height / rows
+
+        label_font = get_font("Jost", max(1, round(cell_h * 0.2)))
+        measure_font = get_font("Jost", max(1, round(cell_h * 0.32)), font_weight="bold")
+        unit_font = get_font("Jost", max(1, round(cell_h * 0.2)))
+
+        for i, dp in enumerate(data_points):
+            col, row = i % cols, i // cols
+            cell_left = left + col * cell_w
+            cell_top = top + row * cell_h
+
+            icon_size = round(min(cell_w * 0.22, cell_h * 0.75))
+            icon_img = Image.open(dp['icon']).convert("RGBA").resize((icon_size, icon_size))
+            icon_x = round(cell_left + cell_w * 0.05)
+            icon_y = round(cell_top + (cell_h - icon_size) / 2)
+            image.paste(icon_img, (icon_x, icon_y), icon_img)
+
+            text_left = icon_x + icon_size + round(cell_w * 0.04)
+            text_center_x = text_left + (cell_left + cell_w - text_left) / 2
+
+            label_h = sum(label_font.getmetrics())
+            measure_h = sum(measure_font.getmetrics())
+            y = cell_top + (cell_h - label_h - measure_h) / 2
+
+            draw.text((text_center_x, y), dp['label'], font=label_font, fill=text_color, anchor="ma")
+            y += label_h
+
+            unit_gap = round(cell_w * 0.015)
+            measure_text = str(dp['measurement'])
+            unit_text = dp.get('unit') or ''
+            arrow_text = dp.get('arrow') or ''
+            measure_w = draw.textlength(measure_text, font=measure_font)
+            unit_w = draw.textlength(unit_text, font=unit_font) + unit_gap if unit_text else 0
+            arrow_w = draw.textlength(arrow_text, font=measure_font) + unit_gap if arrow_text else 0
+            total_w = measure_w + unit_w + arrow_w
+            x = text_center_x - total_w / 2
+            draw.text((x, y), measure_text, font=measure_font, fill=text_color, anchor="la")
+            x += measure_w
+            if unit_text:
+                x += unit_gap
+                draw.text((x, y), unit_text, font=unit_font, fill=text_color, anchor="la")
+                x += unit_w - unit_gap
+            if arrow_text:
+                x += unit_gap
+                draw.text((x, y), arrow_text, font=measure_font, fill=text_color, anchor="la")
+
+    def draw_hourly_chart(self, image, draw, box, text_color, hourly_forecast, show_rain, show_graph_icons, icon_step):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        n = len(hourly_forecast)
+        if n == 0:
+            return
+
+        unit = min(width, height) / 100
+        label_font = get_font("Jost", max(1, round(height * 0.09)))
+
+        temps = [h['temperature'] for h in hourly_forecast]
+        min_temp, max_temp = min(temps), max(temps)
+        if min_temp == max_temp:
+            max_temp = min_temp + 1
+
+        left_margin = round(draw.textlength(f"{max_temp}°", font=label_font)) + round(unit * 3)
+        right_margin = round(draw.textlength("100%", font=label_font)) + round(unit * 3)
+        bottom_margin = round(height * 0.16)
+        icon_margin = round(height * 0.22) if show_graph_icons else 0
+        top_margin = round(height * 0.08)
+
+        plot_left = left + left_margin
+        plot_right = right - right_margin
+        plot_top = top + top_margin
+        plot_bottom = bottom - bottom_margin - icon_margin
+        plot_width = plot_right - plot_left
+        plot_height = plot_bottom - plot_top
+        if plot_width <= 0 or plot_height <= 0:
+            return
+
+        def x_for(i):
+            return plot_left + plot_width * i / max(1, n - 1)
+
+        def y_for_temp(t):
+            return plot_bottom - (t - min_temp) / (max_temp - min_temp) * plot_height
+
+        draw.text((left, plot_top), f"{max_temp}°", font=label_font, fill=text_color, anchor="la")
+        draw.text((left, plot_bottom), f"{min_temp}°", font=label_font, fill=text_color, anchor="ls")
+        draw.text((right, plot_top), "100%", font=label_font, fill=text_color, anchor="ra")
+        draw.text((right, plot_bottom), "0%", font=label_font, fill=text_color, anchor="rs")
+
+        # Precipitation probability bars
+        bar_color = (26, 111, 176, 200)
+        bar_width = max(1, plot_width / n * 0.9)
+        for i, h in enumerate(hourly_forecast):
+            pct = h.get('precipitation') or 0
+            bar_h = pct * plot_height
+            if bar_h <= 0:
+                continue
+            x = x_for(i)
+            bar_top_y = plot_bottom - bar_h
+            draw.rectangle((x - bar_width / 2, bar_top_y, x + bar_width / 2, plot_bottom), fill=bar_color)
+
+        # Temperature line with a gradient fill underneath
+        points = [(x_for(i), y_for_temp(h['temperature'])) for i, h in enumerate(hourly_forecast)]
+        plot_w_px, plot_h_px = max(1, round(plot_width)), max(1, round(plot_height))
+        gradient = np.zeros((plot_h_px, plot_w_px, 4), dtype=np.uint8)
+        top_color = np.array([252, 204, 5])
+        alpha_row = (230 * (1 - np.arange(plot_h_px) / max(1, plot_h_px - 1))).astype(np.uint8)
+        gradient[..., 0:3] = top_color
+        gradient[..., 3] = alpha_row[:, None]
+        gradient_img = Image.fromarray(gradient, mode="RGBA")
+
+        mask = Image.new("L", (plot_w_px, plot_h_px), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        poly = [(x - plot_left, y - plot_top) for x, y in points] + [(plot_w_px, plot_h_px), (0, plot_h_px)]
+        mask_draw.polygon(poly, fill=255)
+        image.paste(gradient_img, (round(plot_left), round(plot_top)), mask)
+
+        draw.line(points, fill=(241, 122, 36, 255), width=max(2, round(unit * 0.4)))
+
+        # Hour labels, skipping enough to avoid overlap
+        label_w = draw.textlength("00:00", font=label_font)
+        max_labels = max(1, int(plot_width / (label_w * 2.2)))
+        label_step = max(1, round(n / max_labels))
+        for i in range(0, n, label_step):
+            draw.text((x_for(i), plot_bottom + round(unit)), hourly_forecast[i]['time'], font=label_font, fill=text_color, anchor="ma")
+
+        if show_rain:
+            rain_font = get_font("Jost", max(1, round(height * 0.07)))
+            threshold = 0.09
+            for i, h in enumerate(hourly_forecast):
+                rain_mm = h.get('rain') or 0
+                if rain_mm > threshold:
+                    pct = h.get('precipitation') or 0
+                    bar_top_y = plot_bottom - pct * plot_height
+                    draw.text((x_for(i), bar_top_y - round(unit)), f"{rain_mm:.2f}mm", font=rain_font, fill=text_color, anchor="ms")
+
+        if show_graph_icons:
+            icon_size = round(icon_margin * 0.8)
+            if icon_size > 0:
+                for i in range(0, n, max(1, icon_step)):
+                    icon_img = Image.open(hourly_forecast[i]['icon']).convert("RGBA").resize((icon_size, icon_size))
+                    icon_x = round(x_for(i) - icon_size / 2)
+                    icon_y = round(plot_bottom + bottom_margin + round(unit))
+                    image.paste(icon_img, (icon_x, icon_y), icon_img)
+
+    def draw_forecast_row(self, image, draw, box, text_color, forecast, show_moon):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        n = len(forecast)
+        if n == 0:
+            return
+
+        gap = round(width * 0.015)
+        card_w = (width - gap * (n - 1)) / n
+        border_radius = round(min(card_w, height) * 0.08)
+        border_width = max(1, round(width * 0.0015))
+
+        day_font = get_font("Jost", max(1, round(height * 0.13)), font_weight="bold")
+        temp_font = get_font("Jost", max(1, round(height * 0.1)))
+        moon_font = get_font("Jost", max(1, round(height * 0.09)))
+
+        for i, day in enumerate(forecast):
+            card_left = left + i * (card_w + gap)
+            card_right = card_left + card_w
+            center_x = card_left + card_w / 2
+            draw.rounded_rectangle((card_left, top, card_right, bottom), radius=border_radius, outline=text_color, width=border_width)
+
+            pad = round(card_w * 0.08)
+            inner_left = card_left + pad
+            inner_right = card_right - pad
+            inner_w = inner_right - inner_left
+
+            y = top + pad
+            draw.text((center_x, y), day['day'], font=day_font, fill=text_color, anchor="ma")
+            y += sum(day_font.getmetrics())
+
+            icon_size = round(min(inner_w, height * 0.32))
+            icon_img = Image.open(day['icon']).convert("RGBA").resize((icon_size, icon_size))
+            image.paste(icon_img, (round(center_x - icon_size / 2), round(y)), icon_img)
+            y += icon_size
+
+            draw.text((center_x, y), f"{day['high']}° / {day['low']}°", font=temp_font, fill=text_color, anchor="ma")
+            y += sum(temp_font.getmetrics())
+
+            if show_moon:
+                y += round(height * 0.02)
+                draw.line((inner_left, y, inner_right, y), fill=text_color, width=1)
+                y += round(height * 0.03)
+                moon_icon_size = round(height * 0.14)
+                moon_icon = Image.open(day['moon_phase_icon']).convert("RGBA").resize((moon_icon_size, moon_icon_size))
+                moon_text = f"{day['moon_phase_pct']} %"
+                moon_text_w = draw.textlength(moon_text, font=moon_font)
+                total_w = moon_icon_size + round(card_w * 0.03) + moon_text_w
+                x = center_x - total_w / 2
+                image.paste(moon_icon, (round(x), round(y)), moon_icon)
+                draw.text((x + moon_icon_size + round(card_w * 0.03), y + moon_icon_size / 2), moon_text, font=moon_font, fill=text_color, anchor="lm")
 
     def parse_open_meteo_data(self, weather_data, aqi_data, tz, time_format, lat):
         current = weather_data.get("current", {})
