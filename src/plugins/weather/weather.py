@@ -340,10 +340,15 @@ class Weather(BasePlugin):
         if show_graph_icons:
             icon_size = round(icon_margin * 0.8)
             if icon_size > 0:
+                icon_cache = {}
+                icon_y = round(plot_bottom + bottom_margin + round(unit))
                 for i in range(0, n, max(1, icon_step)):
-                    icon_img = Image.open(hourly_forecast[i]['icon']).convert("RGBA").resize((icon_size, icon_size))
+                    icon_path = hourly_forecast[i]['icon']
+                    icon_img = icon_cache.get(icon_path)
+                    if icon_img is None:
+                        icon_img = Image.open(icon_path).convert("RGBA").resize((icon_size, icon_size))
+                        icon_cache[icon_path] = icon_img
                     icon_x = round(x_for(i) - icon_size / 2)
-                    icon_y = round(plot_bottom + bottom_margin + round(unit))
                     image.paste(icon_img, (icon_x, icon_y), icon_img)
 
     def draw_forecast_row(self, image, draw, box, text_color, forecast, show_moon):
