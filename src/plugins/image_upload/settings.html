@@ -42,10 +42,53 @@
         height: 20px;
     }
 
+    .photo-picker-item .btn-expand {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .photo-picker-item .btn-expand:hover {
+        background: rgba(0, 0, 0, 0.75);
+    }
+
     .photo-picker-empty {
         color: var(--text-secondary, #666);
         font-size: 0.9rem;
         margin-top: 10px;
+    }
+
+    .photo-picker-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+    }
+
+    .photo-picker-toolbar .link-button {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--accent-primary, #1abc9c);
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-decoration: underline;
+    }
+
+    .photo-picker-count {
+        color: var(--text-secondary, #666);
+        font-size: 0.9rem;
+        margin-left: auto;
     }
 </style>
 
@@ -89,12 +132,47 @@
     <div id="photoPickerEmpty" class="photo-picker-empty" style="display: none;">
         No hay fotos en la biblioteca todavía. Súbelas desde "Gestionar biblioteca".
     </div>
+    <div id="photoPickerToolbar" class="photo-picker-toolbar" style="display: none;">
+        <button type="button" class="link-button" id="selectAllPhotos">Seleccionar todas</button>
+        <button type="button" class="link-button" id="selectNonePhotos">Deseleccionar todas</button>
+        <span id="photoPickerCount" class="photo-picker-count"></span>
+    </div>
 </div>
 
 <script>
+    function updatePhotoPickerCount() {
+        const checkboxes = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]');
+        const selected = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]:checked');
+        const countEl = document.getElementById('photoPickerCount');
+        if (countEl) countEl.textContent = `${selected.length} de ${checkboxes.length} seleccionadas`;
+    }
+
+    function openLightbox(url, alt) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-modal-overlay';
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = alt;
+        overlay.appendChild(img);
+
+        function close() {
+            overlay.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        function onKeyDown(event) {
+            if (event.key === 'Escape') close();
+        }
+
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', onKeyDown);
+        document.body.appendChild(overlay);
+    }
+
     async function loadPhotoPicker() {
         const grid = document.getElementById('photoPickerGrid');
         const emptyState = document.getElementById('photoPickerEmpty');
+        const toolbar = document.getElementById('photoPickerToolbar');
         const selectedPaths = new Set(loadPluginSettings ? (pluginSettings['imageFiles[]'] || []) : []);
 
         try {
@@ -127,9 +205,21 @@
                 img.decoding = 'async';
                 item.appendChild(img);
 
+                const expandButton = document.createElement('button');
+                expandButton.type = 'button';
+                expandButton.className = 'btn-expand';
+                expandButton.title = 'Ver grande';
+                expandButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+                expandButton.addEventListener('click', event => {
+                    event.stopPropagation();
+                    openLightbox(photo.url, photo.filename);
+                });
+                item.appendChild(expandButton);
+
                 checkbox.addEventListener('click', event => event.stopPropagation());
                 checkbox.addEventListener('change', () => {
                     item.classList.toggle('selected', checkbox.checked);
+                    updatePhotoPickerCount();
                 });
                 item.addEventListener('click', () => {
                     checkbox.checked = !checkbox.checked;
@@ -138,10 +228,40 @@
 
                 grid.appendChild(item);
             });
+
+            toolbar.style.display = 'flex';
+            updatePhotoPickerCount();
+
+            document.getElementById('selectAllPhotos').addEventListener('click', () => {
+                document.querySelectorAll('#photoPickerGrid input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
+            document.getElementById('selectNonePhotos').addEventListener('click', () => {
+                document.querySelectorAll('#photoPickerGrid input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
         } catch (error) {
             console.error('Error loading photo library:', error);
         }
     }
+
+    // Block saving with no photos selected, since generate_image() would
+    // otherwise fail silently at the next scheduled refresh.
+    document.addEventListener('click', event => {
+        const commitButton = event.target.closest('[onclick*="handleAction("]');
+        if (!commitButton) return;
+
+        const selected = document.querySelectorAll('#photoPickerGrid input[type="checkbox"]:checked');
+        if (selected.length === 0) {
+            event.stopPropagation();
+            event.preventDefault();
+            showResponseModal('failure', 'Selecciona al menos una foto para que rote.');
+        }
+    }, true);
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('backgroundColor').value = (loadPluginSettings && pluginSettings.backgroundColor) || '#ffffff';
