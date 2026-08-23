@@ -17,6 +17,20 @@ def get_library_dir():
     return library_dir
 
 
+def unique_file_path(library_dir, file_name):
+    """Avoid silently overwriting an existing library photo of the same name."""
+    file_path = os.path.join(library_dir, file_name)
+    if not os.path.exists(file_path):
+        return file_path
+
+    base, extension = os.path.splitext(file_name)
+    counter = 1
+    while os.path.exists(file_path):
+        file_path = os.path.join(library_dir, f"{base} ({counter}){extension}")
+        counter += 1
+    return file_path
+
+
 def list_library_photos():
     library_dir = get_library_dir()
     photos = []
@@ -75,7 +89,8 @@ def photo_library_upload():
             continue
 
         file_name = os.path.basename(file_name)
-        file_path = os.path.join(library_dir, file_name)
+        file_path = unique_file_path(library_dir, file_name)
+        file_name = os.path.basename(file_path)
 
         if extension.lower() in {'jpg', 'jpeg'}:
             try:
