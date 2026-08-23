@@ -4,7 +4,7 @@ from PIL import Image, ImageColor, ImageDraw
 import logging
 import numpy as np
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 logger = logging.getLogger(__name__)
@@ -85,12 +85,27 @@ class Clock(BasePlugin):
         if settings.get('showDate') == 'true':
             date_str = f"{WEEKDAYS_ES[current_time.weekday()]}, {current_time.day} {MONTHS_ES_ABBR[current_time.month - 1]}".upper()
 
+        day_progress = None
+        if settings.get('showDayProgress') == 'true':
+            day_start = tz.localize(datetime(current_time.year, current_time.month, current_time.day))
+            day_end = day_start + timedelta(days=1)
+            day_percent = (current_time - day_start).total_seconds() / (day_end - day_start).total_seconds() * 100
+
+            remaining = day_end - current_time
+            remaining_hours = int(remaining.total_seconds() // 3600)
+            remaining_minutes = int((remaining.total_seconds() % 3600) // 60)
+            if remaining_hours > 0:
+                remaining_str = f"QUEDAN {remaining_hours}H {remaining_minutes}M"
+            else:
+                remaining_str = f"QUEDAN {remaining_minutes}M"
+            day_progress = (day_percent, remaining_str)
+
         img = None
         try:
             if clock_face == "Gradient Clock":
                 img = self.draw_conic_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Digital Clock":
-                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format, date_str=date_str)
+                img = self.draw_digital_clock(dimensions, current_time, primary_color, secondary_color, time_format=time_format, date_str=date_str, day_progress=day_progress)
             elif clock_face == "Divided Clock":
                 img = self.draw_divided_clock(dimensions, current_time, primary_color, secondary_color)
             elif clock_face == "Word Clock":
@@ -100,7 +115,7 @@ class Clock(BasePlugin):
             raise RuntimeError("No se ha podido mostrar el reloj.")
         return img
     
-    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h", date_str=None):
+    def draw_digital_clock(self, dimensions, time, primary_color=(255,255,255), secondary_color=(0,0,0), time_format="24h", date_str=None, day_progress=None):
         w,h = dimensions
 
         am_pm = None
@@ -120,19 +135,60 @@ class Clock(BasePlugin):
         fnt = get_font("DS-Digital", font_size)
         text_draw = ImageDraw.Draw(text)
 
+        footer_font = get_font("Jost", round(w * 0.035), font_weight="bold")
+        letter_spacing = round(w * 0.004)
+        gap = round(h * 0.02)
+        bar_height = round(h * 0.02)
+
+        def ink_extents(label):
+            # Ascent/descent actually used by these specific characters (e.g. the
+            # comma in a date descends below the baseline, digits/letters don't),
+            # rather than the font's fixed metrics, so gaps come out even.
+            l, t, r, b = text_draw.textbbox((0, 0), label, font=footer_font, anchor="ls")
+            return -t, b
+
+        # DS-Digital's own ascent/descent metrics don't match its actual ink,
+        # so measure the drawn glyphs directly to center them on the canvas.
+        digit_left, digit_top, digit_right, digit_bottom = text_draw.textbbox((w/2, h/2), "00:00", font=fnt, anchor="mm")
+        digit_anchor_offset = (digit_top + digit_bottom) / 2 - h/2
+        digit_center_y = h/2 - digit_anchor_offset
+        digit_bottom_y = digit_bottom - digit_anchor_offset
+
         # time text
-        text_draw.text((w/2, h/2), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
-        text_draw.text((w/2, h/2), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
+        text_draw.text((w/2, digit_center_y), "00:00", font=fnt, anchor="mm", fill=primary_color +(30,))
+        text_draw.text((w/2, digit_center_y), time_str, font=fnt, anchor="mm", fill=primary_color +(255,))
 
         if am_pm:
             margin = round(w * 0.03)
             am_pm_font = get_font("Jost", round(w * 0.035), font_weight="bold")
             draw_letter_spaced_text(text_draw, am_pm, am_pm_font, w - margin, h - margin, primary_color+(255,), round(w * 0.004), align="right")
 
+        # The date sits right under the digits...
         if date_str:
-            date_margin = round(h * 0.06)
-            date_font = get_font("Jost", round(w * 0.035), font_weight="bold")
-            draw_letter_spaced_text(text_draw, date_str, date_font, w/2, h - date_margin, primary_color+(255,), round(w * 0.004), align="center")
+            date_ascent, _ = ink_extents(date_str)
+            date_baseline = digit_bottom_y + round(h * 0.04) + date_ascent
+            draw_letter_spaced_text(text_draw, date_str, footer_font, w/2, date_baseline, primary_color+(255,), letter_spacing, align="center")
+
+        # ...while the day progress bar and its remaining-time caption are
+        # anchored to the bottom edge instead, independent of the date/digits.
+        if day_progress:
+            percent, remaining_str = day_progress
+            remaining_ascent, _ = ink_extents(remaining_str)
+            remaining_baseline = h - round(h * 0.06)
+            draw_letter_spaced_text(text_draw, remaining_str, footer_font, w/2, remaining_baseline, primary_color+(255,), letter_spacing, align="center")
+
+            bar_width = round(w * 0.45)
+            bar_left = round(w/2 - bar_width/2)
+            bar_top = round(remaining_baseline - remaining_ascent - gap - bar_height)
+            bar_radius = round(bar_height / 2)
+
+            bar_img = Image.new("RGBA", (bar_width, bar_height), (0, 0, 0, 0))
+            bar_draw = ImageDraw.Draw(bar_img)
+            bar_draw.rounded_rectangle((0, 0, bar_width - 1, bar_height - 1), radius=bar_radius, outline=primary_color + (255,), width=1)
+            fill_width = round(bar_width * percent / 100)
+            if fill_width > 0:
+                bar_draw.rounded_rectangle((0, 0, max(fill_width, bar_height) - 1, bar_height - 1), radius=bar_radius, fill=primary_color + (255,))
+            text.paste(bar_img, (bar_left, bar_top), bar_img)
 
         combined = Image.alpha_composite(image, text)
 
