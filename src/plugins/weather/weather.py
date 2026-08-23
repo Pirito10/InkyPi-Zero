@@ -48,6 +48,10 @@ TEMPERATURE_UNIT = "°C"
 SPEED_UNIT = "m/s"
 DISTANCE_UNIT = "km"
 
+HIGH_COLOR = (196, 40, 40)
+LOW_COLOR = (37, 99, 200)
+SIMPLE_CARD_BG = (232, 232, 232)
+
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,surface_pressure,visibility&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current=temperature,windspeed,winddirection,is_day,precipitation,weather_code,apparent_temperature&timezone=auto&models=best_match&forecast_days={forecast_days}&temperature_unit=celsius&wind_speed_unit=ms&precipitation_unit=mm"
 OPEN_METEO_AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={long}&hourly=european_aqi,uv_index,uv_index_clear_sky&timezone=auto"
 
@@ -117,19 +121,24 @@ class Weather(BasePlugin):
             draw.text((right, top), f"Última actualización: {last_refresh_time}", font=refresh_font, fill=text_color, anchor="ra")
 
         gap = round(height * 0.02)
+        header_h = round(height * 0.15)
+
+        y = top
+        self.draw_weather_header(draw, (left, y, right, y + header_h), text_color, title, data['current_date'])
+        y += header_h + gap
+
+        if simple_mode:
+            self.draw_simple_weather(image, draw, (left, y, right, bottom), text_color, data, forecast_days)
+            return
+
         chart_h = round(height * 0.24) if show_graph else 0
         forecast_h = round(height * 0.24) if show_forecast else 0
-        header_h = round(height * 0.15)
 
         today_h = height - header_h - gap
         if show_graph:
             today_h -= chart_h + gap
         if show_forecast:
             today_h -= forecast_h + gap
-
-        y = top
-        self.draw_weather_header(draw, (left, y, right, y + header_h), text_color, title, data['current_date'])
-        y += header_h + gap
 
         self.draw_today_row(image, draw, (left, y, right, y + today_h), text_color, data, show_metrics)
         y += today_h
@@ -162,6 +171,113 @@ class Weather(BasePlugin):
         else:
             date_h = sum(date_font.getmetrics())
             draw.text((center_x, bottom - date_h), current_date, font=date_font, fill=text_color, anchor="ma")
+
+    def draw_triangle(self, draw, center_x, center_y, size, color, pointing):
+        if pointing == "up":
+            points = [(center_x, center_y - size / 2), (center_x - size / 2, center_y + size / 2), (center_x + size / 2, center_y + size / 2)]
+        else:
+            points = [(center_x, center_y + size / 2), (center_x - size / 2, center_y - size / 2), (center_x + size / 2, center_y - size / 2)]
+        draw.polygon(points, fill=color)
+
+    def high_low_width(self, draw, high_text, low_text, font, triangle_size, gap):
+        high_w = draw.textlength(high_text, font=font)
+        low_w = draw.textlength(low_text, font=font)
+        return triangle_size + gap + high_w + gap * 2 + triangle_size + gap + low_w
+
+    def draw_high_low(self, draw, x, center_y, high_text, low_text, font, triangle_size, gap):
+        """Draws '▲ high  ▼ low' left-to-right starting at x, vertically centered on center_y."""
+        self.draw_triangle(draw, x + triangle_size / 2, center_y, triangle_size, HIGH_COLOR, "up")
+        x += triangle_size + gap
+        draw.text((x, center_y), high_text, font=font, fill=HIGH_COLOR, anchor="lm")
+        x += draw.textlength(high_text, font=font) + gap * 2
+        self.draw_triangle(draw, x + triangle_size / 2, center_y, triangle_size, LOW_COLOR, "down")
+        x += triangle_size + gap
+        draw.text((x, center_y), low_text, font=font, fill=LOW_COLOR, anchor="lm")
+
+    def draw_simple_weather(self, image, draw, box, text_color, data, forecast_days):
+        left, top, right, bottom = box
+        width = right - left
+        gap = round(width * 0.03)
+        now_w = round(width * 0.34)
+
+        self.draw_simple_now_card(image, draw, (left, top, left + now_w, bottom), text_color, data)
+        self.draw_simple_forecast_list(image, draw, (left + now_w + gap, top, right, bottom), text_color, data['forecast'][1:forecast_days + 1])
+
+    def draw_simple_now_card(self, image, draw, box, text_color, data):
+        left, top, right, bottom = box
+        width = right - left
+        height = bottom - top
+        center_x = left + width / 2
+        pad = round(width * 0.06)
+
+        draw.rounded_rectangle((left, top, right, bottom), radius=round(min(width, height) * 0.06), fill=SIMPLE_CARD_BG)
+
+        label_font = get_font("Jost", max(1, round(width * 0.11)), font_weight="bold")
+        temp_font = get_font("Jost", max(1, round(width * 0.34)), font_weight="bold")
+        unit_font = get_font("Jost", max(1, round(width * 0.14)))
+        hl_font = get_font("Jost", max(1, round(width * 0.13)), font_weight="bold")
+
+        y = top + pad
+        draw.text((center_x, y), "AHORA", font=label_font, fill=text_color, anchor="ma")
+        y += sum(label_font.getmetrics()) + round(height * 0.02)
+
+        icon_size = round(width * 0.4)
+        icon_img = Image.open(data['current_day_icon']).convert("RGBA").resize((icon_size, icon_size))
+        image.paste(icon_img, (round(center_x - icon_size / 2), round(y)), icon_img)
+        y += icon_size + round(height * 0.01)
+
+        temp_text = data['current_temperature']
+        unit_text = data['temperature_unit']
+        temp_w = draw.textlength(temp_text, font=temp_font)
+        unit_w = draw.textlength(unit_text, font=unit_font)
+        x = center_x - (temp_w + unit_w) / 2
+        draw.text((x, y), temp_text, font=temp_font, fill=text_color, anchor="la")
+        draw.text((x + temp_w, y), unit_text, font=unit_font, fill=text_color, anchor="la")
+        y += sum(temp_font.getmetrics()) + round(height * 0.025)
+
+        today_forecast = data['forecast'][0] if data['forecast'] else {"high": "-", "low": "-"}
+        high_text = f"{today_forecast['high']}°"
+        low_text = f"{today_forecast['low']}°"
+        triangle_size = round(width * 0.06)
+        hl_gap = round(width * 0.02)
+        hl_w = self.high_low_width(draw, high_text, low_text, hl_font, triangle_size, hl_gap)
+        hl_h = sum(hl_font.getmetrics())
+        self.draw_high_low(draw, center_x - hl_w / 2, y + hl_h / 2, high_text, low_text, hl_font, triangle_size, hl_gap)
+
+    def draw_simple_forecast_list(self, image, draw, box, text_color, forecast):
+        left, top, right, bottom = box
+        width = right - left
+        n = len(forecast)
+        if n == 0:
+            return
+
+        gap = round((bottom - top) * 0.025)
+        row_h = ((bottom - top) - gap * (n - 1)) / n
+
+        day_font = get_font("Jost", max(1, round(row_h * 0.34)))
+        hl_font = get_font("Jost", max(1, round(row_h * 0.28)), font_weight="bold")
+
+        for i, day in enumerate(forecast):
+            row_top = top + i * (row_h + gap)
+            row_bottom = row_top + row_h
+            row_center_y = row_top + row_h / 2
+            radius = round(row_h * 0.18)
+            draw.rounded_rectangle((left, row_top, right, row_bottom), radius=radius, fill=SIMPLE_CARD_BG)
+
+            pad = round(row_h * 0.15)
+            icon_size = round(row_h * 0.7)
+            icon_img = Image.open(day['icon']).convert("RGBA").resize((icon_size, icon_size))
+            image.paste(icon_img, (round(left + pad), round(row_center_y - icon_size / 2)), icon_img)
+
+            day_x = left + pad + icon_size + round(row_h * 0.2)
+            draw.text((day_x, row_center_y), day['day'], font=day_font, fill=text_color, anchor="lm")
+
+            high_text = f"{day['high']}°"
+            low_text = f"{day['low']}°"
+            triangle_size = round(row_h * 0.2)
+            hl_gap = round(row_h * 0.06)
+            hl_w = self.high_low_width(draw, high_text, low_text, hl_font, triangle_size, hl_gap)
+            self.draw_high_low(draw, right - pad - hl_w, row_center_y, high_text, low_text, hl_font, triangle_size, hl_gap)
 
     def draw_today_row(self, image, draw, box, text_color, data, show_metrics):
         left, top, right, bottom = box
