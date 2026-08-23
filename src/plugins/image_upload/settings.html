@@ -123,6 +123,8 @@
                 const img = document.createElement('img');
                 img.src = photo.url;
                 img.alt = photo.filename;
+                img.loading = 'lazy';
+                img.decoding = 'async';
                 item.appendChild(img);
 
                 checkbox.addEventListener('click', event => event.stopPropagation());

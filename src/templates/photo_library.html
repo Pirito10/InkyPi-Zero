@@ -120,7 +120,7 @@
             <div id="library-grid" class="library-grid">
                 {% for photo in photos %}
                 <div class="library-photo" data-filename="{{ photo.filename }}">
-                    <img src="{{ photo.url }}" alt="{{ photo.filename }}">
+                    <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy" decoding="async">
                     <button type="button" class="btn-delete" data-filename="{{ photo.filename }}" title="Borrar">×</button>
                 </div>
                 {% endfor %}
@@ -157,6 +157,8 @@
             const img = document.createElement('img');
             img.src = `/static/images/saved/${encodeURIComponent(filename)}`;
             img.alt = filename;
+            img.loading = 'lazy';
+            img.decoding = 'async';
             div.appendChild(img);
 
             div.appendChild(createDeleteButton(filename));
