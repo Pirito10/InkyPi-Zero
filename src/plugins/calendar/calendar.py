@@ -50,6 +50,16 @@ class Calendar(BasePlugin):
         if view == 'timeGridWeek' and settings.get("displayPreviousDays") != "true":
             view = 'timeGrid'
 
+        # FullCalendar's own contentHeight/height:'100%' measures its
+        # container via JS at render time to compute row heights — this
+        # works in Chromium but not in WebKitGTK (used as a fallback on
+        # boards Chromium can't run on), where it reads a stale/wrong value
+        # and lets content overflow uncapped. Passing a plain pixel number
+        # sidesteps that measurement entirely. Matches base_plugin.html's
+        # `padding: 1.5vw` on <body>, which eats into both dimensions.
+        body_padding = round(dimensions[0] * 0.015)
+        fc_height = dimensions[1] - 2 * body_padding
+
         template_params = {
             "view": view,
             "events": events,
@@ -57,7 +67,8 @@ class Calendar(BasePlugin):
             "timezone": timezone,
             "plugin_settings": settings,
             "time_format": time_format,
-            "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal"))
+            "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal")),
+            "fc_height": fc_height
         }
 
         image = self.render_image(dimensions, "calendar.html", "calendar.css", template_params)

@@ -8,6 +8,16 @@
     -moz-osx-font-smoothing: grayscale; /* Alternative for macOS */
 }
 
+/* Without an explicit height here, percentage heights further down
+   (.container, .calendar, FullCalendar's contentHeight: '100%') only
+   resolve correctly if the renderer implicitly treats the root element's
+   height as the viewport size. Chromium does; WebKitGTK doesn't, so content
+   renders at its natural (uncapped) height there instead of being fit to
+   the actual screen size. */
+html, body {
+    height: 100%;
+}
+
 img {
     image-rendering: pixelated; /* Preserve sharp edges */
     image-rendering: crisp-edges;

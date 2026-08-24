@@ -47,7 +47,7 @@ def main():
             GLib.timeout_add(500, take_snapshot)
 
     def take_snapshot():
-        webview.get_snapshot(WebKit2.SnapshotRegion.FULL_DOCUMENT, WebKit2.SnapshotOptions.NONE, None, on_snapshot_ready, None)
+        webview.get_snapshot(WebKit2.SnapshotRegion.VISIBLE, WebKit2.SnapshotOptions.NONE, None, on_snapshot_ready, None)
         return False
 
     def on_snapshot_ready(webview, res, data):
