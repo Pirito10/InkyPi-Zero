@@ -1,6 +1,6 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from plugins.calendar.constants import FONT_SIZES
-from PIL import Image, ImageColor
+from PIL import ImageColor
 import icalendar
 import recurring_ical_events
 import logging
@@ -88,7 +88,7 @@ class Calendar(BasePlugin):
             for event in events:
                 start, end, all_day = self.parse_data_points(event, tz)
                 parsed_event = {
-                    "title": str(event.get("summary")),
+                    "title": str(event.get("summary") or ""),
                     "start": start,
                     "backgroundColor": color,
                     "textColor": contrast_color,
