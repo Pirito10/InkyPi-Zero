@@ -316,17 +316,17 @@ class Agenda(BasePlugin):
         left, top, right, bottom = box
         width = right - left
 
-        temp_font = get_font("Jost", round(height * 0.09), font_weight="bold")
-        icon_size = round(width * 0.5)
+        temp_font = get_font("Jost", round(height * 0.13), font_weight="bold")
+        icon_size = round(min(width * 0.8, height * 0.25))
         temp_h = sum(temp_font.getmetrics())
-        current_gap = height * 0.02
-        section_gap = height * 0.06
+        current_gap = height * 0.03
+        section_gap = height * 0.08
 
         forecast = weather["forecast"][1:]
-        label_font = get_font("Jost", round(height * 0.032), font_weight="bold")
-        hilo_font = get_font("Jost", round(height * 0.03))
-        row_h = height * 0.11
-        small_icon_size = round(min(row_h * 0.55, width * 0.32))
+        label_font = get_font("Jost", round(height * 0.046), font_weight="bold")
+        hilo_font = get_font("Jost", round(height * 0.042))
+        row_h = height * 0.17
+        small_icon_size = round(min(row_h * 0.7, width * 0.42))
 
         current_h = icon_size + current_gap + temp_h
         forecast_h = len(forecast) * row_h
