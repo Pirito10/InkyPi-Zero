@@ -406,7 +406,11 @@ class Calendar(BasePlugin):
                 d = datetime.fromisoformat(event["start"]).date()
                 all_day_events_by_date.setdefault(d, []).append(event)
         has_all_day = any(d in all_day_events_by_date for d in days)
-        all_day_h = round(height * 0.05 * font_scale) if has_all_day else 0
+        # Stack up to 3 rows of all-day events per day; any more collapse
+        # into a "+N" indicator so the section can't grow without bound.
+        max_all_day_rows = min(3, max((len(all_day_events_by_date.get(d, [])) for d in days), default=0))
+        all_day_row_h = round(height * 0.05 * font_scale) if has_all_day else 0
+        all_day_h = all_day_row_h * max_all_day_rows
 
         gutter_w = round(width * 0.06)
         grid_left = left + gutter_w
@@ -426,10 +430,10 @@ class Calendar(BasePlugin):
             draw.text((cx, top + header_h / 2), label, font=header_font, fill=text_color, anchor="mm")
 
         if has_all_day:
-            chip_font = get_font("Jost", max(1, round(all_day_h * 0.5)))
-            radius = max(2, round(all_day_h * 0.2))
+            chip_font = get_font("Jost", max(1, round(all_day_row_h * 0.5)))
+            radius = max(2, round(all_day_row_h * 0.2))
 
-            all_day_label_font = get_font("Jost", max(1, round(all_day_h * 0.32)))
+            all_day_label_font = get_font("Jost", max(1, round(all_day_row_h * 0.32)))
             all_day_label = truncate_text(draw, "Todo el día", all_day_label_font, gutter_w - 4)
             draw.text((left + 2, top + header_h + all_day_h / 2), all_day_label, font=all_day_label_font, fill=text_color, anchor="lm")
             draw.line((grid_left, top + header_h, grid_left, grid_top), fill=line_color, width=1)
@@ -439,13 +443,27 @@ class Calendar(BasePlugin):
                 if not day_events:
                     continue
                 cell_left = grid_left + i * col_w
-                event = day_events[0]
-                label = truncate_text(draw, event["title"], chip_font, col_w - 4)
-                draw.rounded_rectangle(
-                    (cell_left + 2, top + header_h + 2, cell_left + col_w - 2, top + header_h + all_day_h - 2),
-                    radius=radius, fill=event["backgroundColor"], outline=text_color, width=1
-                )
-                draw.text((cell_left + col_w / 2, top + header_h + all_day_h / 2), label, font=chip_font, fill=event["textColor"], anchor="mm")
+
+                if len(day_events) > max_all_day_rows:
+                    shown = day_events[:max(0, max_all_day_rows - 1)]
+                    remaining = len(day_events) - len(shown)
+                else:
+                    shown = day_events
+                    remaining = 0
+
+                for row_idx, event in enumerate(shown):
+                    row_top = top + header_h + row_idx * all_day_row_h
+                    row_bottom = row_top + all_day_row_h
+                    label = truncate_text(draw, event["title"], chip_font, col_w - 4)
+                    draw.rounded_rectangle(
+                        (cell_left + 2, row_top + 2, cell_left + col_w - 2, row_bottom - 2),
+                        radius=radius, fill=event["backgroundColor"], outline=text_color, width=1
+                    )
+                    draw.text((cell_left + col_w / 2, (row_top + row_bottom) / 2), label, font=chip_font, fill=event["textColor"], anchor="mm")
+
+                if remaining > 0:
+                    row_top = top + header_h + len(shown) * all_day_row_h
+                    draw.text((cell_left + col_w / 2, row_top + all_day_row_h / 2), f"+{remaining}", font=chip_font, fill=line_color, anchor="mm")
 
         for h in range(num_hours + 1):
             y = grid_top + h * hour_h
