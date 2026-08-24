@@ -5,6 +5,7 @@ import icalendar
 import recurring_ical_events
 import logging
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 import pytz
 
@@ -80,8 +81,12 @@ class Calendar(BasePlugin):
     def fetch_ics_events(self, calendar_urls, colors, tz, start_range, end_range):
         parsed_events = []
 
-        for calendar_url, color in zip(calendar_urls, colors):
-            cal = self.fetch_calendar(calendar_url)
+        # Calendars are fetched over the network, not computed, so fetching
+        # them concurrently avoids waiting on each one's request/timeout in turn.
+        with ThreadPoolExecutor(max_workers=len(calendar_urls)) as executor:
+            calendars = executor.map(self.fetch_calendar, calendar_urls)
+
+        for cal, color in zip(calendars, colors):
             events = recurring_ical_events.of(cal).between(start_range, end_range)
             contrast_color = self.get_contrast_color(color)
 
