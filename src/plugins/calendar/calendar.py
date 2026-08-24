@@ -424,10 +424,6 @@ class Calendar(BasePlugin):
             cx = grid_left + i * col_w + col_w / 2
             label = f"{WEEKDAYS_ES[day.weekday()]} {day.day}" if not single_day else WEEKDAYS_ES_LONG[day.weekday()]
             draw.text((cx, top + header_h / 2), label, font=header_font, fill=text_color, anchor="mm")
-            if day == today:
-                underline_y = top + header_h - 2
-                tw = draw.textlength(label, font=header_font)
-                draw.line((cx - tw / 2, underline_y, cx + tw / 2, underline_y), fill=text_color, width=TODAY_OUTLINE_WIDTH)
 
         if has_all_day:
             chip_font = get_font("Jost", max(1, round(all_day_h * 0.5)))
@@ -456,7 +452,7 @@ class Calendar(BasePlugin):
             if h < num_hours:
                 hour_dt = current_dt.replace(hour=(start_hour + h) % 24, minute=0)
                 label = format_event_time(hour_dt, time_format)
-                draw.text((left, y + 2), label, font=hour_font, fill=text_color, anchor="la")
+                draw.text((grid_left - 4, y + 2), label, font=hour_font, fill=text_color, anchor="ra")
 
         for i in range(len(days) + 1):
             x = grid_left + i * col_w
