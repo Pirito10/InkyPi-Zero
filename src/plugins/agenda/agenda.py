@@ -31,7 +31,6 @@ class Agenda(BasePlugin):
 
     def generate_image(self, settings, device_config):
         calendar_urls = settings.get('calendarURLs[]')
-        calendar_colors = settings.get('calendarColors[]')
         lat_str = settings.get('latitude')
         long_str = settings.get('longitude')
 
@@ -62,7 +61,7 @@ class Agenda(BasePlugin):
         # they're kicked off together instead of waiting on one before
         # starting the other.
         with ThreadPoolExecutor(max_workers=2) as executor:
-            events_future = executor.submit(self.fetch_ics_events, calendar_urls, calendar_colors, tz, start, end)
+            events_future = executor.submit(self.fetch_ics_events, calendar_urls, tz, start, end)
             weather_future = executor.submit(self.get_open_meteo_data, float(lat_str), float(long_str))
 
             events = events_future.result()
@@ -110,13 +109,13 @@ class Agenda(BasePlugin):
             if covers:
                 day["events"].append(event)
 
-    def fetch_ics_events(self, calendar_urls, colors, tz, start_range, end_range):
+    def fetch_ics_events(self, calendar_urls, tz, start_range, end_range):
         parsed_events = []
 
         with ThreadPoolExecutor(max_workers=len(calendar_urls)) as executor:
             calendars = executor.map(self.fetch_calendar, calendar_urls)
 
-        for cal, color in zip(calendars, colors):
+        for cal in calendars:
             events = recurring_ical_events.of(cal).between(start_range, end_range)
 
             for event in events:
@@ -141,7 +140,6 @@ class Agenda(BasePlugin):
                     "start": start,
                     "end": end,
                     "allDay": all_day,
-                    "color": color,
                 })
 
         return parsed_events

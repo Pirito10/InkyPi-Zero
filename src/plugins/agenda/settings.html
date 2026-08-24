@@ -4,7 +4,7 @@
 <div>
   <label class="form-label">Calendarios:</label>
   <div id="calendarList"></div>
-  <button type="button" id="addCalendarBtn" class="form-input collapsible" onclick="addCalendarInput('', '#007BFF')">Añadir calendario</button>
+  <button type="button" id="addCalendarBtn" class="form-input collapsible" onclick="addCalendarInput('')">Añadir calendario</button>
 </div>
 
 <div class="form-group">
@@ -46,18 +46,12 @@
 </div>
 
 <script>
-    function addCalendarInput(url = '', color = '#007BFF') {
+    function addCalendarInput(url = '') {
         const calendarList = document.getElementById('calendarList');
 
         const wrapper = document.createElement('div');
         wrapper.classList.add('calendar-entry');
         wrapper.classList.add('form-group');
-
-        const colorInput = document.createElement('input');
-        colorInput.type = 'color';
-        colorInput.name = 'calendarColors[]';
-        colorInput.classList.add('color-picker')
-        colorInput.value = color;
 
         const urlInput = document.createElement('input');
         urlInput.type = 'text';
@@ -73,7 +67,6 @@
         removeBtn.classList.add('remove-btn');
         removeBtn.onclick = () => wrapper.remove();
 
-        wrapper.appendChild(colorInput);
         wrapper.appendChild(urlInput);
         wrapper.appendChild(removeBtn);
 
@@ -117,7 +110,7 @@
             closeModal('mapModal');
         });
 
-        let calendars = [{ url: '', color: '#007BFF' }];
+        let calendarUrls = [''];
         let fontSize = "normal";
 
         if (loadPluginSettings) {
@@ -126,17 +119,14 @@
             fontSize = pluginSettings.fontSize;
 
             if (pluginSettings["calendarURLs[]"]) {
-                calendars = pluginSettings["calendarURLs[]"].map((url, i) => ({
-                    url: url || '',
-                    color: pluginSettings["calendarColors[]"][i] || '#007BFF'
-                }));
+                calendarUrls = pluginSettings["calendarURLs[]"];
             }
         }
 
         document.getElementById('fontSize').value = fontSize;
 
-        calendars.forEach(({ url, color }) => {
-            addCalendarInput(url, color);
+        calendarUrls.forEach(url => {
+            addCalendarInput(url || '');
         });
     });
 </script>
