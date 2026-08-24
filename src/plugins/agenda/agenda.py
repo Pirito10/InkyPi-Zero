@@ -1,5 +1,4 @@
 from plugins.base_plugin.base_plugin import BasePlugin
-from plugins.calendar.constants import FONT_SIZES
 from utils.app_utils import get_font, resolve_path
 from PIL import Image
 import icalendar
@@ -226,7 +225,6 @@ class Agenda(BasePlugin):
     def draw_agenda(self, image, draw, content_box, text_color, days, weather, settings, time_format):
         left, top, right, bottom = content_box
         height = bottom - top
-        font_scale = FONT_SIZES.get(settings.get("fontSize", "normal"))
 
         title_font = get_font("Jost", round(height * 0.075), font_weight="bold")
         today = days[0]["date"]
@@ -242,17 +240,19 @@ class Agenda(BasePlugin):
 
         draw.line((divider_x, body_top, divider_x, bottom), fill=MUTED_GRAY, width=1)
 
-        self.draw_calendar_list(draw, (left, body_top, list_right, bottom), text_color, days, body_height, font_scale, time_format)
+        self.draw_calendar_list(draw, (left, body_top, list_right, bottom), text_color, days, body_height, time_format)
         self.draw_weather_panel(image, draw, (divider_x + body_height * 0.03, body_top, right, bottom), text_color, weather, body_height)
 
-    def draw_calendar_list(self, draw, box, text_color, days, height, font_scale, time_format):
+    def draw_calendar_list(self, draw, box, text_color, days, height, time_format):
         left, top, right, bottom = box
-        bar_font = get_font("Jost", round(height * 0.045 * font_scale), font_weight="bold")
-        time_font = get_font("Jost", round(height * 0.038 * font_scale), font_weight="bold")
-        title_font = get_font("Jost", round(height * 0.04 * font_scale))
-        empty_font = get_font("Jost", round(height * 0.038 * font_scale))
+        # Font size doesn't apply here — this plugin always uses a fixed
+        # size equivalent to the calendar plugin's "larger" (1.2x) option.
+        bar_font = get_font("Jost", round(height * 0.054), font_weight="bold")
+        time_font = get_font("Jost", round(height * 0.0456), font_weight="bold")
+        title_font = get_font("Jost", round(height * 0.048))
+        empty_font = get_font("Jost", round(height * 0.0456))
 
-        bar_h = round(height * 0.075 * font_scale)
+        bar_h = round(height * 0.09)
         row_h = bar_h
         sample_time = "00:00 - 00:00" if time_format == "24h" else "00:00 AM - 00:00 PM"
         time_col_w = draw.textlength(sample_time, font=time_font) + height * 0.02

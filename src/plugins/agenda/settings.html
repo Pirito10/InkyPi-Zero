@@ -20,21 +20,6 @@
     <button type="button" id="openMap" class="action-button compact">Elegir ubicación</button>
 </div>
 
-<div class="form-group">
-    <div class="form-group nowrap">
-        <label for="fontSize" class="form-label">Tamaño de fuente:</label>
-        <select id="fontSize" name="fontSize" class="form-input">
-            <option value="x-small">Extra pequeño</option>
-            <option value="smaller">Más pequeño</option>
-            <option value="small">Pequeño</option>
-            <option value="normal">Normal</option>
-            <option value="large">Grande</option>
-            <option value="larger">Más grande</option>
-            <option value="x-large">Extra grande</option>
-        </select>
-    </div>
-</div>
-
 <div id="mapModal" class="modal">
     <div class="modal-content">
         <span class="close-button" onclick="closeModal('mapModal')">×</span>
@@ -111,19 +96,15 @@
         });
 
         let calendarUrls = [''];
-        let fontSize = "normal";
 
         if (loadPluginSettings) {
             document.getElementById('latitude').value = pluginSettings.latitude;
             document.getElementById('longitude').value = pluginSettings.longitude;
-            fontSize = pluginSettings.fontSize;
 
             if (pluginSettings["calendarURLs[]"]) {
                 calendarUrls = pluginSettings["calendarURLs[]"];
             }
         }
-
-        document.getElementById('fontSize').value = fontSize;
 
         calendarUrls.forEach(url => {
             addCalendarInput(url || '');
