@@ -196,13 +196,15 @@ class Calendar(BasePlugin):
         left, top, right, bottom = content_box
         width = right - left
         height = bottom - top
-        font_scale = FONT_SIZES.get(settings.get("fontSize", "normal"))
         today_color = settings.get("nowIndicatorColor") or DEFAULT_TODAY_COLOR
 
-        month_font = get_font("Jost", round(height * 0.11 * font_scale), font_weight="bold")
-        year_font = get_font("Jost", round(height * 0.075 * font_scale))
-        weekday_font = get_font("Jost", round(height * 0.04 * font_scale))
-        day_font = get_font("Jost", round(height * 0.06 * font_scale))
+        # Font size doesn't apply here — there's no text density to trade
+        # off against, so a fixed size (tuned to fill the grid well) is used
+        # instead of the fontSize setting.
+        month_font = get_font("Jost", round(height * 0.11), font_weight="bold")
+        year_font = get_font("Jost", round(height * 0.075))
+        weekday_font = get_font("Jost", round(height * 0.04))
+        day_font = get_font("Jost", round(height * 0.06))
 
         # Header: month name and year share one baseline, side by side.
         month_name = MONTHS_ES[current_dt.month - 1].upper()
