@@ -84,17 +84,23 @@ class Agenda(BasePlugin):
 
     def assign_event_to_day(self, event, days, current_dt, tz):
         event_start = datetime.fromisoformat(event["start"])
+        event_end = datetime.fromisoformat(event["end"]) if event.get("end") else None
+
+        if event_end and event_end <= current_dt:
+            return  # Already over — don't show it on any day.
+
         for day in days:
-            if event_start.date() != day["date"].date():
-                continue
-            # Events that already ended are only ever hidden for today —
-            # future days haven't happened yet, so nothing there can be "over".
-            if day["date"].date() == current_dt.date() and event.get("end"):
-                event_end = datetime.fromisoformat(event["end"])
-                if event_end <= current_dt:
-                    return
-            day["events"].append(event)
-            return
+            day_date = day["date"].date()
+            if event_end:
+                # All-day end dates are exclusive per the iCalendar spec
+                # (DTSTART=27 DTEND=30 covers the 27th-29th, not the 30th),
+                # timed ones are inclusive of the end day.
+                last_day = event_end.date() - timedelta(days=1) if event["allDay"] else event_end.date()
+                covers = event_start.date() <= day_date <= last_day
+            else:
+                covers = event_start.date() == day_date
+            if covers:
+                day["events"].append(event)
 
     def fetch_ics_events(self, calendar_urls, colors, tz, start_range, end_range):
         parsed_events = []
