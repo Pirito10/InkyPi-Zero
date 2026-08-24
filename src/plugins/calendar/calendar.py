@@ -362,9 +362,14 @@ class Calendar(BasePlugin):
                 if settings.get("displayEventTime") == "true" and not event["allDay"]:
                     dt = datetime.fromisoformat(event["start"])
                     label = f"{format_event_time(dt, time_format)} {label}"
-                draw.rectangle((cell_left + pad, chip_y, cell_left + pad + chip_w, chip_y + chip_h - round(vpad * 0.3)), fill=event["backgroundColor"])
+                chip_bottom = chip_y + chip_h - round(vpad * 0.3)
+                radius = max(1, min(4, round((chip_bottom - chip_y) * 0.25), round(chip_w * 0.15)))
+                draw.rounded_rectangle(
+                    (cell_left + pad, chip_y, cell_left + pad + chip_w, chip_bottom),
+                    radius=radius, fill=event["backgroundColor"], outline=text_color, width=1
+                )
                 label = truncate_text(draw, label, event_font, chip_w - pad)
-                draw.text((cell_left + pad * 1.5, chip_y + (chip_h - round(vpad * 0.3)) / 2), label, font=event_font, fill=event["textColor"], anchor="lm")
+                draw.text((cell_left + pad * 1.5, (chip_y + chip_bottom) / 2), label, font=event_font, fill=event["textColor"], anchor="lm")
                 chip_y += chip_h
 
             if remaining > 0:
@@ -409,7 +414,7 @@ class Calendar(BasePlugin):
         col_w = (right - grid_left) / len(days)
         hour_h = (bottom - grid_top) / num_hours
 
-        hour_font = get_font("Jost", max(1, round(hour_h * 0.22)))
+        hour_font = get_font("Jost", max(1, round(hour_h * 0.5)))
         # Events can be as short as a few minutes tall, so size their text off
         # the hour row height (not column width, which is huge in day view).
         event_font = get_font("Jost", max(1, round(min(hour_h * 0.42, col_w * 0.09))))
@@ -426,6 +431,12 @@ class Calendar(BasePlugin):
 
         if has_all_day:
             chip_font = get_font("Jost", max(1, round(all_day_h * 0.5)))
+            radius = max(2, round(all_day_h * 0.2))
+
+            all_day_label_font = get_font("Jost", max(1, round(all_day_h * 0.32)))
+            all_day_label = truncate_text(draw, "Todo el día", all_day_label_font, gutter_w - 4)
+            draw.text((left + 2, top + header_h + all_day_h / 2), all_day_label, font=all_day_label_font, fill=text_color, anchor="lm")
+
             for i, day in enumerate(days):
                 day_events = all_day_events_by_date.get(day, [])
                 if not day_events:
@@ -433,7 +444,10 @@ class Calendar(BasePlugin):
                 cell_left = grid_left + i * col_w
                 event = day_events[0]
                 label = truncate_text(draw, event["title"], chip_font, col_w - 4)
-                draw.rectangle((cell_left + 2, top + header_h + 2, cell_left + col_w - 2, top + header_h + all_day_h - 2), fill=event["backgroundColor"])
+                draw.rounded_rectangle(
+                    (cell_left + 2, top + header_h + 2, cell_left + col_w - 2, top + header_h + all_day_h - 2),
+                    radius=radius, fill=event["backgroundColor"], outline=text_color, width=1
+                )
                 draw.text((cell_left + col_w / 2, top + header_h + all_day_h / 2), label, font=chip_font, fill=event["textColor"], anchor="mm")
 
         for h in range(num_hours + 1):
@@ -466,9 +480,13 @@ class Calendar(BasePlugin):
                     continue
 
                 y1 = grid_top + start_frac * (bottom - grid_top)
-                y2 = grid_top + end_frac * (bottom - grid_top)
+                y2 = max(grid_top + end_frac * (bottom - grid_top), y1 + 2)
 
-                draw.rectangle((cell_left + 2, y1, cell_left + col_w - 2, max(y2, y1 + 2)), fill=event["backgroundColor"])
+                radius = max(1, min(4, round((y2 - y1) * 0.25), round((col_w - 4) * 0.25)))
+                draw.rounded_rectangle(
+                    (cell_left + 2, y1, cell_left + col_w - 2, y2),
+                    radius=radius, fill=event["backgroundColor"], outline=text_color, width=1
+                )
 
                 label = event["title"]
                 if settings.get("displayEventTime") == "true":
