@@ -9,6 +9,7 @@
     "timezone": "Europe/Madrid",
     "time_format": "24h",
     "plugin_order": [
+        "agenda",
         "calendar",
         "clock",
         "countdown",
