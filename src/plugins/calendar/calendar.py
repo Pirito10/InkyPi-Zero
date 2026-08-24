@@ -432,6 +432,7 @@ class Calendar(BasePlugin):
             all_day_label_font = get_font("Jost", max(1, round(all_day_h * 0.32)))
             all_day_label = truncate_text(draw, "Todo el día", all_day_label_font, gutter_w - 4)
             draw.text((left + 2, top + header_h + all_day_h / 2), all_day_label, font=all_day_label_font, fill=text_color, anchor="lm")
+            draw.line((grid_left, top + header_h, grid_left, grid_top), fill=line_color, width=1)
 
             for i, day in enumerate(days):
                 day_events = all_day_events_by_date.get(day, [])
