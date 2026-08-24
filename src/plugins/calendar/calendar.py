@@ -5,6 +5,7 @@ from PIL import Image, ImageColor
 import icalendar
 import recurring_ical_events
 import logging
+import re
 import requests
 from datetime import datetime, timedelta, date
 import pytz
@@ -19,6 +20,31 @@ MONTHS_ES = [
 ]
 
 TODAY_OUTLINE_WIDTH = 2
+
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F1E0-\U0001F1FF"  # flags
+    "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
+    "\U0001FA70-\U0001FAFF"  # symbols & pictographs extended-A
+    "\U00002600-\U000026FF"  # misc symbols
+    "\U00002700-\U000027BF"  # dingbats
+    "\U0000FE0F"             # variation selector-16 (emoji presentation)
+    "\U0000200D"             # zero-width joiner (compound emoji)
+    "]+", flags=re.UNICODE
+)
+
+
+def strip_emoji(text):
+    """Jost has no emoji glyphs, and PIL doesn't fall back to another font
+    for characters missing from the current one — draw.text() just skips
+    them, leaving an odd gap in the middle of the title. Strip them instead
+    so the remaining text spaces out normally.
+    """
+    text = EMOJI_PATTERN.sub("", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def truncate_text(draw, text, font, max_width):
@@ -91,7 +117,7 @@ class Calendar(BasePlugin):
             for event in events:
                 start, end, all_day = self.parse_data_points(event, tz)
                 parsed_event = {
-                    "title": str(event.get("summary")),
+                    "title": strip_emoji(str(event.get("summary"))),
                     "start": start,
                     "backgroundColor": color,
                     "textColor": contrast_color,
