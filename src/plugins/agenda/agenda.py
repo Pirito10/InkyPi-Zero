@@ -1,7 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from plugins.calendar.constants import FONT_SIZES
 from utils.app_utils import get_font, resolve_path
-from PIL import Image, ImageColor
+from PIL import Image
 import icalendar
 import recurring_ical_events
 import logging
@@ -14,7 +14,12 @@ import pytz
 logger = logging.getLogger(__name__)
 
 WEEKDAYS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
 MUTED_GRAY = "#999999"
+DAY_BAR_COLORS = ["#3c8b64", "#2f6fce", "#5b6b7a"]
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&daily=weathercode,temperature_2m_max,temperature_2m_min&current=temperature,weather_code&timezone=auto&forecast_days=3&temperature_unit=celsius"
 
@@ -208,68 +213,78 @@ class Agenda(BasePlugin):
             icon = "11d"
         return resolve_path(os.path.join("plugins", "weather", "icons", f"{icon}.png"))
 
-    def get_contrast_color(self, color):
-        r, g, b = ImageColor.getrgb(color)
-        yiq = (r * 299 + g * 587 + b * 114) / 1000
-        return '#000000' if yiq >= 150 else '#ffffff'
-
     def draw_agenda(self, image, draw, content_box, text_color, days, weather, settings, time_format):
         left, top, right, bottom = content_box
         height = bottom - top
         font_scale = FONT_SIZES.get(settings.get("fontSize", "normal"))
 
+        title_font = get_font("Jost", round(height * 0.075), font_weight="bold")
+        today = days[0]["date"]
+        title = f"{WEEKDAYS_ES[today.weekday()].capitalize()}, {today.day} de {MONTHS_ES[today.month - 1]} de {today.year}"
+        draw.text(((left + right) / 2, top), title, font=title_font, fill=text_color, anchor="ma")
+
+        body_top = top + sum(title_font.getmetrics()) * 1.4
+        body_height = bottom - body_top
+
         weather_width = (right - left) * 0.24
         divider_x = right - weather_width
-        list_right = divider_x - height * 0.03
+        list_right = divider_x - body_height * 0.03
 
-        draw.line((divider_x, top, divider_x, bottom), fill=MUTED_GRAY, width=1)
+        draw.line((divider_x, body_top, divider_x, bottom), fill=MUTED_GRAY, width=1)
 
-        self.draw_calendar_list(draw, (left, top, list_right, bottom), text_color, days, height, font_scale, time_format)
-        self.draw_weather_panel(image, draw, (divider_x + height * 0.03, top, right, bottom), text_color, weather, height)
+        self.draw_calendar_list(draw, (left, body_top, list_right, bottom), text_color, days, body_height, font_scale, time_format)
+        self.draw_weather_panel(image, draw, (divider_x + body_height * 0.03, body_top, right, bottom), text_color, weather, body_height)
 
     def draw_calendar_list(self, draw, box, text_color, days, height, font_scale, time_format):
         left, top, right, bottom = box
-        day_font = get_font("Jost", round(height * 0.055 * font_scale), font_weight="bold")
-        time_font = get_font("Jost", round(height * 0.04 * font_scale))
-        title_font = get_font("Jost", round(height * 0.042 * font_scale))
+        bar_font = get_font("Jost", round(height * 0.045 * font_scale), font_weight="bold")
+        time_font = get_font("Jost", round(height * 0.038 * font_scale), font_weight="bold")
+        title_font = get_font("Jost", round(height * 0.04 * font_scale))
         empty_font = get_font("Jost", round(height * 0.038 * font_scale))
 
+        bar_h = round(height * 0.075 * font_scale)
         row_h = round(height * 0.075 * font_scale)
-        dot_r = round(height * 0.012 * font_scale)
+        time_col_w = draw.textlength("00:00 - 00:00", font=time_font) + height * 0.02
 
         y = top
-        for day in days:
-            draw.text((left, y), day["label"], font=day_font, fill=text_color, anchor="la")
-            y += sum(day_font.getmetrics()) * 1.1
+        for i, day in enumerate(days):
+            bar_color = DAY_BAR_COLORS[i % len(DAY_BAR_COLORS)]
+            draw.rectangle((left, y, right, y + bar_h), fill=bar_color)
+            draw.text(((left + right) / 2, y + bar_h / 2), self.day_bar_label(day), font=bar_font, fill="#ffffff", anchor="mm")
+            y += bar_h
 
             if not day["events"]:
-                draw.text((left, y), "Sin eventos", font=empty_font, fill=MUTED_GRAY, anchor="la")
-                y += row_h
+                empty_row_h = row_h * 0.9
+                draw.text(((left + right) / 2, y + empty_row_h / 2), "Sin eventos", font=empty_font, fill=MUTED_GRAY, anchor="mm")
+                y += empty_row_h
                 continue
 
             for event in day["events"]:
                 row_top = y
-                dot_y = row_top + sum(title_font.getmetrics()) / 2
-                draw.circle((left + dot_r, dot_y), dot_r, fill=event["color"])
+                row_center = row_top + row_h / 2
 
-                text_x = left + dot_r * 3
                 if event["allDay"]:
                     time_label = "Todo el día"
                 else:
                     start_dt = datetime.fromisoformat(event["start"])
                     time_label = self.format_time(start_dt, time_format)
 
-                draw.text((text_x, row_top), time_label, font=time_font, fill=MUTED_GRAY, anchor="la")
-                time_w = draw.textlength(time_label, font=time_font)
+                draw.text((left, row_center), time_label, font=time_font, fill=text_color, anchor="lm")
 
-                title_x = text_x + time_w + height * 0.02
+                title_x = left + time_col_w
                 max_title_w = right - title_x
                 title = self.truncate_to_width(draw, event["title"], title_font, max_title_w)
-                draw.text((title_x, row_top - 2), title, font=title_font, fill=text_color, anchor="la")
+                draw.text((title_x, row_center), title, font=title_font, fill=text_color, anchor="lm")
 
                 y += row_h
+                draw.line((left, y, right, y), fill="#e0e0e0", width=1)
 
-            y += row_h * 0.3
+    def day_bar_label(self, day):
+        date = day["date"]
+        date_str = f"{WEEKDAYS_ES[date.weekday()]}, {date.day} de {MONTHS_ES[date.month - 1]}"
+        if day["label"] in ("Hoy", "Mañana"):
+            return f"{day['label']}: {date_str}"
+        return date_str.capitalize()
 
     def truncate_to_width(self, draw, text, font, max_width):
         if draw.textlength(text, font=font) <= max_width:
