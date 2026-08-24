@@ -75,3 +75,7 @@ th {
 .fc table {
   font-size: var(--fc-table-font-size) !important;
 }
+
+.fc .fc-list-event-dot {
+  margin-top: 7px !important;
+}
