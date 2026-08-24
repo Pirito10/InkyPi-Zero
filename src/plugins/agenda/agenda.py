@@ -213,9 +213,7 @@ class Agenda(BasePlugin):
             icon = "13d"
         elif weather_code in [77]:
             icon = "77d"
-        elif weather_code in [95]:
-            icon = "11d"
-        elif weather_code in [96, 99]:
+        elif weather_code in [95, 96, 99]:
             icon = "11d"
         return resolve_path(os.path.join("plugins", "weather", "icons", f"{icon}.png"))
 
@@ -249,8 +247,9 @@ class Agenda(BasePlugin):
         empty_font = get_font("Jost", round(height * 0.038 * font_scale))
 
         bar_h = round(height * 0.075 * font_scale)
-        row_h = round(height * 0.075 * font_scale)
-        time_col_w = draw.textlength("00:00 - 00:00", font=time_font) + height * 0.02
+        row_h = bar_h
+        sample_time = "00:00 - 00:00" if time_format == "24h" else "00:00 AM - 00:00 PM"
+        time_col_w = draw.textlength(sample_time, font=time_font) + height * 0.02
 
         y = top
         for i, day in enumerate(days):
@@ -274,6 +273,9 @@ class Agenda(BasePlugin):
                 else:
                     start_dt = datetime.fromisoformat(event["start"])
                     time_label = self.format_time(start_dt, time_format)
+                    if event.get("end"):
+                        end_dt = datetime.fromisoformat(event["end"])
+                        time_label += f" - {self.format_time(end_dt, time_format)}"
 
                 draw.text((left, row_center), time_label, font=time_font, fill=text_color, anchor="lm")
 
