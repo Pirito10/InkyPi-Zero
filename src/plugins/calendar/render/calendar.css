@@ -69,7 +69,6 @@ th {
 }
 
 .day-title .fc-col-header-cell-cushion {
-  font-size: var(--fc-title-font-size) !important;
   padding: 4px 0 !important;
 }
 
