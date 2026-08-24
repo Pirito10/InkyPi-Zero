@@ -1,3 +1,12 @@
+<div class="form-group">
+    <label for="mode" class="form-label">Modo:</label>
+    <select id="mode" name="mode" class="form-input" onchange="toggleModeGroups();">
+        <option value="advanced">Avanzado</option>
+        <option value="simple">Simple</option>
+    </select>
+</div>
+
+<div id="advanced-mode-group">
 <div>
   <label class="form-label">Calendarios:</label>
   <div id="calendarList"></div>
@@ -65,7 +74,10 @@
         <label for="interval">Días a mostrar:</label>
         <input type="number" id="displayDays" name="displayDays" class="form-input" min="1" max="90" placeholder="7">
     </div>
+</div>
+</div>
 
+<div class="form-group">
     <div class="form-group nowrap">
         <label for="fontSize" class="form-label">Tamaño de fuente:</label>
         <select id="fontSize" name="fontSize" class="form-input">
@@ -94,6 +106,18 @@
       document.getElementById('viewMode').value = value;
 
       updateViewDependentOptions(value);
+    }
+
+    function toggleModeGroups() {
+        const isSimple = document.getElementById('mode').value === 'simple';
+        const group = document.getElementById('advanced-mode-group');
+        group.style.display = isSimple ? 'none' : '';
+        group.querySelectorAll('input, select, textarea').forEach(input => {
+            input.disabled = isSimple;
+        });
+        if (!isSimple) {
+            updateViewDependentOptions(document.getElementById('viewMode').value);
+        }
     }
 
     function updateViewDependentOptions(viewMode) {
@@ -160,6 +184,7 @@
         if (loadPluginSettings) {
             viewMode = pluginSettings.viewMode;
             fontSize = pluginSettings.fontSize;
+            document.getElementById('mode').value = pluginSettings.mode || 'advanced';
 
             document.getElementById('displayTitle').checked = pluginSettings.displayTitle;
             document.getElementById('displayTitle').value = pluginSettings.displayTitle;
@@ -210,5 +235,6 @@
         });
 
         updateViewDependentOptions(viewMode)
+        toggleModeGroups();
     });
 </script>
