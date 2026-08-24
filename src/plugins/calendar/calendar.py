@@ -53,7 +53,7 @@ class Calendar(BasePlugin):
         template_params = {
             "view": view,
             "events": events,
-            "current_dt": current_dt.replace(minute=0, second=0, microsecond=0).isoformat(),
+            "current_dt": current_dt.isoformat(),
             "timezone": timezone,
             "plugin_settings": settings,
             "time_format": time_format,
