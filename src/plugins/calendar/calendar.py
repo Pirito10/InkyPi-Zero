@@ -448,7 +448,12 @@ class Calendar(BasePlugin):
 
         for h in range(num_hours + 1):
             y = grid_top + h * hour_h
-            draw.line((left, y, right, y), fill=line_color, width=1)
+            if h == 0 and has_all_day:
+                # Double line to set the all-day row apart from the hour grid.
+                draw.line((left, y - 2, right, y - 2), fill=line_color, width=1)
+                draw.line((left, y, right, y), fill=line_color, width=1)
+            else:
+                draw.line((left, y, right, y), fill=line_color, width=1)
             if h < num_hours:
                 hour_dt = current_dt.replace(hour=(start_hour + h) % 24, minute=0)
                 label = format_event_time(hour_dt, time_format)
