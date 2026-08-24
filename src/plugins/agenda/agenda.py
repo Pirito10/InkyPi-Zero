@@ -352,5 +352,5 @@ class Agenda(BasePlugin):
             text_top = row_center - (label_h + line_gap + hilo_h) / 2
 
             draw.text((text_x, text_top), day["label"], font=label_font, fill=text_color, anchor="la")
-            hilo = f"{day['high']}° / {day['low']}°"
+            hilo = f"{day['high']}° / {day['low']}°" if day["high"] is not None and day["low"] is not None else "—"
             draw.text((text_x, text_top + label_h + line_gap), hilo, font=hilo_font, fill=MUTED_GRAY, anchor="la")
