@@ -41,7 +41,7 @@ class Calendar(BasePlugin):
         tz = pytz.timezone(timezone)
 
         current_dt = datetime.now(tz)
-        start, end = self.get_view_range(view, current_dt, settings)
+        start, end = self.get_view_range(view, current_dt, settings, tz)
         logger.debug(f"Fetching events for {start} --> [{current_dt}] --> {end}")
         events = self.fetch_ics_events(calendar_urls, calendar_colors, tz, start, end)
         if not events:
@@ -101,25 +101,28 @@ class Calendar(BasePlugin):
 
         return parsed_events
 
-    def get_view_range(self, view, current_dt, settings):
-        start = datetime(current_dt.year, current_dt.month, current_dt.day)
+    def get_view_range(self, view, current_dt, settings, tz):
+        # Arithmetic on a pytz-aware datetime keeps its original UTC offset
+        # even if it crosses a DST change, so every date built here goes
+        # through tz.localize()/tz.normalize() to stay correct year-round.
+        today = tz.localize(datetime(current_dt.year, current_dt.month, current_dt.day))
+        start = today
         if view == "timeGridDay":
-            end = start + timedelta(days=1)
+            end = tz.normalize(start + timedelta(days=1))
         elif view == "timeGridWeek":
             if settings.get("displayPreviousDays") == "true":
                 # Weeks always start on Monday.
-                offset = current_dt.weekday()
-                start = current_dt - timedelta(days=offset)
-                start = datetime(start.year, start.month, start.day)
-            end = start + timedelta(days=7)
+                start = tz.normalize(today - timedelta(days=current_dt.weekday()))
+            end = tz.normalize(start + timedelta(days=7))
         elif view == "dayGrid":
-            start = current_dt - timedelta(weeks=1)
-            end = current_dt + timedelta(weeks=int(settings.get("displayWeeks") or 4))
+            start = tz.normalize(today - timedelta(weeks=1))
+            end = tz.normalize(today + timedelta(weeks=int(settings.get("displayWeeks") or 4)))
         elif view == "dayGridMonth":
-            start = datetime(current_dt.year, current_dt.month, 1) - timedelta(weeks=1)
-            end = datetime(current_dt.year, current_dt.month, 1) + timedelta(weeks=6)
+            month_start = tz.localize(datetime(current_dt.year, current_dt.month, 1))
+            start = tz.normalize(month_start - timedelta(weeks=1))
+            end = tz.normalize(month_start + timedelta(weeks=6))
         elif view == "listMonth":
-            end = start + timedelta(days=int(settings.get("displayDays") or 7))
+            end = tz.normalize(start + timedelta(days=int(settings.get("displayDays") or 7)))
         return start, end
 
     def parse_data_points(self, event, tz):
