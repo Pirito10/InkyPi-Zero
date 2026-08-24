@@ -206,14 +206,17 @@ class Calendar(BasePlugin):
         weekday_font = get_font("Jost", round(height * 0.04))
         day_font = get_font("Jost", round(height * 0.06))
 
-        # Header: month name and year share one baseline, side by side.
+        # Header: month name and year share one baseline, side by side, centered as a pair.
         month_name = MONTHS_ES[current_dt.month - 1].upper()
         year_str = str(current_dt.year)
         _, month_top, _, month_bottom = draw.textbbox((0, 0), month_name, font=month_font)
         header_baseline = top + (month_bottom - month_top)
-        draw.text((left, header_baseline), month_name, font=month_font, fill=text_color, anchor="ls")
         month_width = draw.textlength(month_name, font=month_font)
-        draw.text((left + month_width + width * 0.02, header_baseline), year_str, font=year_font, fill=MUTED_GRAY, anchor="ls")
+        year_width = draw.textlength(year_str, font=year_font)
+        gap = width * 0.02
+        header_left = left + (width - (month_width + gap + year_width)) / 2
+        draw.text((header_left, header_baseline), month_name, font=month_font, fill=text_color, anchor="ls")
+        draw.text((header_left + month_width + gap, header_baseline), year_str, font=year_font, fill=MUTED_GRAY, anchor="ls")
 
         # Weekday initials row, evenly spaced across the 7 columns.
         col_width = width / 7
