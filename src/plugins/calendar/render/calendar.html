@@ -3,8 +3,9 @@
 {% block content %}
 
 <script src="{{static_dir}}/scripts/calendar.min.js" charset="UTF-8"></script>
+<script src="{{static_dir}}/scripts/calendar.es.min.js" charset="UTF-8"></script>
 
-<div id="calendar" class="calendar" style="
+<div id="calendar" class="calendar {{ 'day-title' if view == 'timeGridDay' else '' }}" style="
 --fc-page-bg-color: {{ plugin_settings.backgroundColor or white }};
 --fc-border-color: {{ plugin_settings.textColor }};
 --fc-today-bg-color: '';
@@ -12,7 +13,6 @@
 --fc-event-border-color: {{ plugin_settings.textColor or white }};
 
 --fc-small-font-size: {{ 0.85 * font_scale }}em;
---fc-title-font-size: {{ 1.75 * font_scale }}em;
 --fc-table-font-size: {{ 1 * font_scale }}em;
 ">
 
@@ -36,11 +36,12 @@
             events: events,
             now: '{{ current_dt }}',
             timeZone: '{{ timezone }}',
-            contentHeight: '100%',
+            height: {{ fc_height }},
             slotDuration: '01:00:00',
+            scrollTime: '00:00:00',
             expandRows: true,
-            locale: "{{ plugin_settings.language or 'en' }}",
-            firstDay: "{{ plugin_settings.weekStartDay or 0}}",
+            locale: "es",
+            firstDay: "1",
             slotLabelFormat: timeFormat,
             slotMinTime: "{{ plugin_settings.startTimeInterval or 00}}:00:00",
             slotMaxTime: "{{ plugin_settings.endTimeInterval or 24}}:00:00",
@@ -51,12 +52,20 @@
             fixedWeekCount: false,
             {% if view == 'timeGrid' %}duration: {days : 7 },{% endif %}
             {% if view == 'dayGrid' %}duration: {weeks : "{{ plugin_settings.displayWeeks or 4}}" },{% endif %}
+            {% if view == 'timeGridDay' %}
+            dayHeaders: {{ (plugin_settings.displayTitle == 'true') | tojson }},
+            dayHeaderFormat: { weekday: 'long', day: 'numeric', month: 'long' },
+            {% endif %}
+            {% if view == 'listMonth' %}
+            views: {
+                listMonth: { duration: { days: {{ plugin_settings.displayDays or 7 }} } }
+            },
+            {% endif %}
             headerToolbar: {
                 left: '',
-                center: "{{ 'title' if plugin_settings.displayTitle == 'true' else '' }}",
+                center: "{{ 'title' if plugin_settings.displayTitle == 'true' and view != 'timeGridDay' else '' }}",
                 right: ''
-            },
-            slotDuration: "01:00:00"
+            }
         });
         calendar.render();
     });

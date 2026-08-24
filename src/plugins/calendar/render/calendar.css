@@ -65,9 +65,40 @@ th {
 
 
 .fc .fc-toolbar-title {
-  font-size: var(--fc-title-font-size) !important;
+  font-size: var(--fc-table-font-size) !important;
+}
+
+.day-title .fc-col-header-cell-cushion {
+  padding: 4px 0 !important;
 }
 
 .fc table {
   font-size: var(--fc-table-font-size) !important;
+}
+
+.fc .fc-list-event-dot {
+  margin-top: 5px !important;
+}
+
+.fc .fc-daygrid-month-start {
+  font-size: var(--fc-table-font-size) !important;
+}
+
+.fc .fc-event-title {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* FullCalendar's short time-grid events lay time+title out in a row,
+   but only ever sets min-height:0 on this flex item (written for the
+   normal column layout), never min-width:0 — so the default min-width:auto
+   stops it shrinking below its content's width and it silently overflows
+   instead of ellipsizing. */
+.fc-timegrid-event-short .fc-event-title-container {
+  min-width: 0 !important;
+}
+
+.fc-timegrid-event-short .fc-event-title {
+  position: relative !important;
 }

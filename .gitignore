@@ -175,4 +175,5 @@ src/static/images/current_image.png
 /src/static/scripts/jquery.min.js
 /src/static/scripts/chart.js
 /src/static/scripts/calendar.min.js
+/src/static/scripts/calendar.es.min.js
 /src/static/styles/select2.min.css

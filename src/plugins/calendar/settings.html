@@ -1,99 +1,93 @@
+<div class="form-group">
+    <label for="mode" class="form-label">Modo:</label>
+    <select id="mode" name="mode" class="form-input" onchange="toggleModeGroups();">
+        <option value="advanced">Avanzado</option>
+        <option value="simple">Simple</option>
+    </select>
+</div>
+
+<div id="advanced-mode-group">
 <div>
-  <label class="form-label">Calendars:</label>
+  <label class="form-label">Calendarios:</label>
   <div id="calendarList"></div>
-  <button type="button" id="addCalendarBtn" class="form-input collapsible" onclick="addCalendarInput('', '#007BFF')">Add Calendar</button>
+  <button type="button" id="addCalendarBtn" class="form-input collapsible" onclick="addCalendarInput('', '#007BFF')">Añadir calendario</button>
 </div>
 
 <div class="form-group">
     <div class="form-group">
-        <label class="form-label">Layout: </label>
+        <label class="form-label">Diseño: </label>
         <div class="button-group" id="viewSelector">
-            <button type="button" data-value="timeGridDay" onclick="selectView(this)">Day</button>
-            <button type="button" data-value="timeGridWeek" onclick="selectView(this)">Week</button>
-            <button type="button" data-value="dayGrid" onclick="selectView(this)">Multi-Week</button>
-            <button type="button" data-value="dayGridMonth" onclick="selectView(this)">Month</button>
-            <button type="button" data-value="listMonth" onclick="selectView(this)">List</button>
+            <button type="button" data-value="timeGridDay" onclick="selectView(this)">Día</button>
+            <button type="button" data-value="timeGridWeek" onclick="selectView(this)">Semana</button>
+            <button type="button" data-value="dayGrid" onclick="selectView(this)">Multi-Semana</button>
+            <button type="button" data-value="dayGridMonth" onclick="selectView(this)">Mes</button>
+            <button type="button" data-value="listMonth" onclick="selectView(this)">Lista</button>
         </div>
     </div>
     <input type="hidden" name="viewMode" id="viewMode" value="timeGridDay">
-    <div class="form-group">
-        <label for="language" class="form-label">Language:</label>
-        <select id="language" name="language" class="form-input">
-            {% for code, name in locale_map.items() %}
-                <option value="{{ code }}">{{ name }}</option>
-            {% endfor %}
-        </select>
-    </div>
 </div>
 
 <div class="form-group">
-    <label for="displayTitle" class="form-label">Display: </label>
+    <label for="displayTitle" class="form-label">Mostrar: </label>
 
     <div class="form-group">
       <input type="checkbox" id="displayTitle" name="displayTitle" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
-      <span>Title</span>
+      <span>Título</span>
     </div>
 
-    <div class="form-group">
+    <div class="form-group" data-visible-modes="timeGridWeek,dayGrid,dayGridMonth,listMonth">
         <input type="checkbox" id="displayWeekends" name="displayWeekends" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Weekends</span>
+        <span>Fin de semana</span>
     </div>
 
     <div class="form-group">
       <input type="checkbox" id="displayEventTime" name="displayEventTime" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
-      <span>Event Time</span>
+      <span>Hora del evento</span>
     </div>
 
     <div class="form-group" data-visible-modes="timeGridDay,timeGridWeek">
       <input type="checkbox" id="displayNowIndicator" name="displayNowIndicator" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
-      <span>Now Indicator</span>
+      <span>Hora actual</span>
       <input type="color" id="nowIndicatorColor" name="nowIndicatorColor" class="color-picker" value="#ff0000">
     </div>
 
     <div class="form-group" data-visible-modes="timeGridWeek">
       <input type="checkbox" id="displayPreviousDays" name="displayPreviousDays" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
-      <span>Previous Days</span>
+      <span>Días previos</span>
     </div>
 </div>
 
 <div class="form-group">
-    <div class="form-group nowrap" data-visible-modes="timeGridWeek,dayGridMonth,dayGrid">
-        <label for="weekStartDay" class="form-label">Week Start Day:</label>
-        <select id="weekStartDay" name="weekStartDay" class="form-input">
-            <option value="0">Sunday</option>
-            <option value="1">Monday</option>
-            <option value="2">Tuesday</option>
-            <option value="3">Wednesday</option>
-            <option value="4">Thursday</option>
-            <option value="5">Friday</option>
-            <option value="6">Saturday</option>
-        </select>
-    </div>
-
     <div class="form-group nowrap" data-visible-modes="timeGridDay,timeGridWeek">
-        <label for="interval">Time Interval:</label>
+        <label for="interval">Intervalo horario:</label>
         <input type="number" id="startTimeInterval" name="startTimeInterval" class="form-input" min="0" max="24" placeholder="00">
         -
         <input type="number" id="endTimeInterval" name="endTimeInterval" class="form-input" min="0" max="24" placeholder="24">
     </div>
 
     <div class="form-group nowrap" data-visible-modes="dayGrid">
-        <label for="interval">Display Weeks:</label>
+        <label for="interval">Semanas a mostrar:</label>
         <input type="number" id="displayWeeks" name="displayWeeks" class="form-input" min="1" max="52" placeholder="4">
     </div>
 
+    <div class="form-group nowrap" data-visible-modes="listMonth">
+        <label for="interval">Días a mostrar:</label>
+        <input type="number" id="displayDays" name="displayDays" class="form-input" min="1" max="90" placeholder="7">
+    </div>
+
     <div class="form-group nowrap">
-        <label for="fontSize" class="form-label">Font Size:</label>
+        <label for="fontSize" class="form-label">Tamaño de fuente:</label>
         <select id="fontSize" name="fontSize" class="form-input">
-            <option value="x-small">Extra Small</option>
-            <option value="smaller">Smaller</option>
-            <option value="small">Small</option>
+            <option value="x-small">Extra pequeño</option>
+            <option value="smaller">Más pequeño</option>
+            <option value="small">Pequeño</option>
             <option value="normal">Normal</option>
-            <option value="large">Large</option>
-            <option value="larger">Larger</option>
-            <option value="x-large">Extra Larger</option>
+            <option value="large">Grande</option>
+            <option value="larger">Más grande</option>
+            <option value="x-large">Extra grande</option>
         </select>
     </div>
+</div>
 </div>
 
 <script>
@@ -110,6 +104,18 @@
       document.getElementById('viewMode').value = value;
 
       updateViewDependentOptions(value);
+    }
+
+    function toggleModeGroups() {
+        const isSimple = document.getElementById('mode').value === 'simple';
+        const group = document.getElementById('advanced-mode-group');
+        group.style.display = isSimple ? 'none' : '';
+        group.querySelectorAll('input, select, textarea').forEach(input => {
+            input.disabled = isSimple;
+        });
+        if (!isSimple) {
+            updateViewDependentOptions(document.getElementById('viewMode').value);
+        }
     }
 
     function updateViewDependentOptions(viewMode) {
@@ -145,7 +151,7 @@
         const urlInput = document.createElement('input');
         urlInput.type = 'text';
         urlInput.name = 'calendarURLs[]';
-        urlInput.placeholder = 'Calendar URL';
+        urlInput.placeholder = 'URL del calendario';
         urlInput.required = true;
         urlInput.classList.add('form-input');
         urlInput.value = url;
@@ -170,14 +176,13 @@
 
         // defaults
         let viewMode = "dayGridMonth";
-        let language = "en";
         let calendars = [{ url: '', color: '#007BFF' }];
         let fontSize = "normal";
 
         if (loadPluginSettings) {
             viewMode = pluginSettings.viewMode;
-            language = pluginSettings.language;
             fontSize = pluginSettings.fontSize;
+            document.getElementById('mode').value = pluginSettings.mode || 'advanced';
 
             document.getElementById('displayTitle').checked = pluginSettings.displayTitle;
             document.getElementById('displayTitle').value = pluginSettings.displayTitle;
@@ -195,12 +200,12 @@
             document.getElementById('displayPreviousDays').checked = pluginSettings.displayPreviousDays;
             document.getElementById('displayPreviousDays').value = pluginSettings.displayPreviousDays;
 
-            document.getElementById('weekStartDay').value = pluginSettings.weekStartDay;
-
             document.getElementById("startTimeInterval").value = pluginSettings.startTimeInterval;
             document.getElementById("endTimeInterval").value = pluginSettings.endTimeInterval;
 
             document.getElementById("displayWeeks").value = pluginSettings.displayWeeks;
+
+            document.getElementById("displayDays").value = pluginSettings.displayDays;
             
             if (pluginSettings["calendarURLs[]"]) {
                 calendars = pluginSettings["calendarURLs[]"].map((url, i) => ({
@@ -220,8 +225,6 @@
             }
         });
 
-        // populate language dropdown
-        document.getElementById('language').value = language;
         document.getElementById('fontSize').value = fontSize;
 
         // populate calendars
@@ -230,5 +233,6 @@
         });
 
         updateViewDependentOptions(viewMode)
+        toggleModeGroups();
     });
 </script>
