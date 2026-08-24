@@ -119,7 +119,7 @@ class Calendar(BasePlugin):
             start = datetime(current_dt.year, current_dt.month, 1) - timedelta(weeks=1)
             end = datetime(current_dt.year, current_dt.month, 1) + timedelta(weeks=6)
         elif view == "listMonth":
-            end = start + timedelta(weeks=5)
+            end = start + timedelta(days=int(settings.get("displayDays") or 7))
         return start, end
 
     def parse_data_points(self, event, tz):

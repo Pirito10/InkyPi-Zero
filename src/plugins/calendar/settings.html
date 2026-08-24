@@ -61,6 +61,11 @@
         <input type="number" id="displayWeeks" name="displayWeeks" class="form-input" min="1" max="52" placeholder="4">
     </div>
 
+    <div class="form-group nowrap" data-visible-modes="listMonth">
+        <label for="interval">Días a mostrar:</label>
+        <input type="number" id="displayDays" name="displayDays" class="form-input" min="1" max="90" placeholder="7">
+    </div>
+
     <div class="form-group nowrap">
         <label for="fontSize" class="form-label">Tamaño de fuente:</label>
         <select id="fontSize" name="fontSize" class="form-input">
@@ -176,6 +181,8 @@
             document.getElementById("endTimeInterval").value = pluginSettings.endTimeInterval;
 
             document.getElementById("displayWeeks").value = pluginSettings.displayWeeks;
+
+            document.getElementById("displayDays").value = pluginSettings.displayDays;
             
             if (pluginSettings["calendarURLs[]"]) {
                 calendars = pluginSettings["calendarURLs[]"].map((url, i) => ({

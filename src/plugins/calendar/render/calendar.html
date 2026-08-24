@@ -56,6 +56,11 @@
             dayHeaders: {{ (plugin_settings.displayTitle == 'true') | tojson }},
             dayHeaderFormat: { weekday: 'long', day: 'numeric', month: 'long' },
             {% endif %}
+            {% if view == 'listMonth' %}
+            views: {
+                listMonth: { duration: { days: {{ plugin_settings.displayDays or 7 }} } }
+            },
+            {% endif %}
             headerToolbar: {
                 left: '',
                 center: "{{ 'title' if plugin_settings.displayTitle == 'true' and view != 'timeGridDay' else '' }}",
