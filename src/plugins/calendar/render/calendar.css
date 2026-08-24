@@ -79,3 +79,7 @@ th {
 .fc .fc-list-event-dot {
   margin-top: 5px !important;
 }
+
+.fc .fc-daygrid-month-start {
+  font-size: var(--fc-table-font-size) !important;
+}
