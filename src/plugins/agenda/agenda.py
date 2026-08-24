@@ -57,16 +57,24 @@ class Agenda(BasePlugin):
 
         start = today
         end = tz.normalize(today + timedelta(days=3))
-        events = self.fetch_ics_events(calendar_urls, calendar_colors, tz, start, end)
-        for event in events:
-            self.assign_event_to_day(event, days, current_dt, tz)
 
-        try:
-            weather_data = self.get_open_meteo_data(float(lat_str), float(long_str))
-            weather = self.parse_weather(weather_data, days)
-        except Exception as e:
-            logger.error(f"Open-Meteo request failed: {str(e)}")
-            raise RuntimeError("Fallo en la petición a Open-Meteo, revisa los registros.")
+        # The calendars and the weather are unrelated network requests, so
+        # they're kicked off together instead of waiting on one before
+        # starting the other.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            events_future = executor.submit(self.fetch_ics_events, calendar_urls, calendar_colors, tz, start, end)
+            weather_future = executor.submit(self.get_open_meteo_data, float(lat_str), float(long_str))
+
+            events = events_future.result()
+            for event in events:
+                self.assign_event_to_day(event, days, current_dt, tz)
+
+            try:
+                weather_data = weather_future.result()
+                weather = self.parse_weather(weather_data, days)
+            except Exception as e:
+                logger.error(f"Open-Meteo request failed: {str(e)}")
+                raise RuntimeError("Fallo en la petición a Open-Meteo, revisa los registros.")
 
         def draw_content(image, draw, content_box, text_color):
             self.draw_agenda(image, draw, content_box, text_color, days, weather, settings, time_format)
