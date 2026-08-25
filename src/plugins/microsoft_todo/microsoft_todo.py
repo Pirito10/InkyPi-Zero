@@ -159,8 +159,8 @@ class MicrosoftTodo(BasePlugin):
 
         task_font = get_font("Jost", round(row_h * 0.4))
         due_font = get_font("Jost", round(row_h * 0.28))
-        dot_r = round(row_h * 0.09)
-        text_x = left + dot_r * 3.5
+        dot_r = round(row_h * 0.065)
+        text_x = left + dot_r * 4.5
 
         y = body_top
         for task in tasks:
