@@ -40,14 +40,6 @@ class WaveshareDisplay(AbstractDisplay):
         self.epd_display = EPD()
         self.epd_display.init()
 
-        if not self.device_config.get_config("resolution"):
-            w, h = int(self.epd_display.width), int(self.epd_display.height)
-            resolution = [w, h] if w >= h else [h, w]
-            self.device_config.update_value(
-                "resolution",
-                resolution,
-                write=True)
-
     def display_image(self, image, image_settings=[]):
         """
         Displays an image on the Waveshare display.
