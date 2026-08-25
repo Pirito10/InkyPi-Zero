@@ -143,26 +143,31 @@ class MicrosoftTodo(BasePlugin):
         height = bottom - top
 
         title_font = get_font("Jost", round(height * 0.08), font_weight="bold")
-        task_font = get_font("Jost", round(height * 0.065))
-        due_font = get_font("Jost", round(height * 0.045))
-
-        draw.text((left, top), list_name or "Tareas", font=title_font, fill=text_color, anchor="la")
+        draw.text(((left + right) / 2, top), list_name or "Tareas", font=title_font, fill=text_color, anchor="ma")
         body_top = top + sum(title_font.getmetrics()) * 1.6
 
         if not tasks:
-            draw.text(((left + right) / 2, (body_top + bottom) / 2), "Sin tareas pendientes", font=task_font, fill=MUTED_GRAY, anchor="mm")
+            empty_font = get_font("Jost", round(height * 0.05))
+            draw.text(((left + right) / 2, (body_top + bottom) / 2), "Sin tareas pendientes", font=empty_font, fill=MUTED_GRAY, anchor="mm")
             return
 
-        row_h = min(round(height * 0.21), round((bottom - body_top) / len(tasks)))
-        circle_r = round(height * 0.024)
-        text_x = left + circle_r * 3.2
+        # Row height (and every font below) scales with how many tasks there
+        # are, so a short list reads big and a long one still fits without
+        # being silently cut off.
+        row_h = (bottom - body_top) / len(tasks)
+        row_h = max(height * 0.06, min(height * 0.21, row_h))
+
+        task_font = get_font("Jost", round(row_h * 0.4))
+        due_font = get_font("Jost", round(row_h * 0.28))
+        dot_r = round(row_h * 0.06)
+        text_x = left + dot_r * 4
 
         y = body_top
         for task in tasks:
-            if y + row_h > bottom:
+            if y + row_h > bottom + 1:  # small tolerance for float rounding when rows are sized to fit exactly
                 break
             row_center = y + row_h / 2
-            draw.circle((left + circle_r, row_center), circle_r, outline=CIRCLE_COLOR, width=max(2, round(circle_r * 0.16)))
+            draw.circle((left + dot_r, row_center), dot_r, fill=CIRCLE_COLOR)
 
             title = task.get("title") or ""
             due = task.get("dueDateTime")
