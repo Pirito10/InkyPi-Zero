@@ -1,0 +1,23 @@
+{% if connected %}
+<div class="form-group">
+    <label for="listId" class="form-label">Lista de tareas:</label>
+    <select id="listId" name="listId" class="form-input">
+        {% for list in lists %}
+            <option value="{{ list.id }}">{{ list.displayName }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% else %}
+<div class="form-group">
+    <p>No se ha podido conectar con Microsoft To Do. Ejecuta <code>scripts/connect_microsoft_todo.py</code> en el servidor para autorizar la cuenta, y vuelve a abrir estos ajustes.</p>
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const listIdInput = document.getElementById('listId');
+        if (loadPluginSettings && listIdInput) {
+            listIdInput.value = pluginSettings.listId;
+        }
+    });
+</script>

@@ -167,6 +167,9 @@ cython_debug/
 mock_display_output/
 src/static/images/current_image.png
 
+# Microsoft To Do OAuth token cache (sensitive, per-device)
+src/config/microsoft_todo_token_cache.json
+
 # IDE files
 .idea
 
