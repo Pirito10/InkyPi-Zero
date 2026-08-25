@@ -21,7 +21,4 @@
 - [ ] **Pase de interfaz móvil.** Nunca se ha hecho. Ajustes, Playlists y el dashboard principal ya tienen su diseño definitivo en escritorio — tocaría revisar los tres en móvil.
 - [ ] **Intervalo mínimo de rotación (60s) por debajo de lo que recomienda Waveshare (180s)** para este panel.
 - [ ] **La lista de playlists no se ordena por hora de inicio**, y **no se pueden reordenar los plugins dentro de una playlist** (solo orden de inserción).
-- [ ] **1 plugin de comunidad probado, sin decisión final**: `simple_calendar`.
-  - Pierde algo de sentido ahora que `calendar` renderiza vía WebKitGTK cuando Chromium falla — revisar si sigue mereciendo la pena probarlo.
-  - `flow_progress` (barras día/semana/mes/año), `today` (hora+fecha+progreso del día) y `mini_weather` ya no están pendientes: se integraron directamente como funcionalidad de `year_progress` (modo "Avanzado"), `clock` (Digital Clock: fecha + progreso del día) y `weather` (modo "Simple"), en vez de instalarse como plugins aparte.
 - [ ] **Orientación vertical rompe el layout de `weather`** (encontrado al probar el modo Simple, pero afecta también al Avanzado): el título se solapa con "Última actualización", y en Avanzado la cuadrícula de métricas se solapa con la descripción del tiempo. La cabecera (`draw_weather_header`) y la fila de "hoy" no tienen en cuenta que en vertical la altura disponible es mucho mayor que en horizontal. El dispositivo del regalo está fijo en horizontal, así que no es urgente.
