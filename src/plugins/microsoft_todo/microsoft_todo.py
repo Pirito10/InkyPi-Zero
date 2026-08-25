@@ -196,6 +196,8 @@ class MicrosoftTodo(BasePlugin):
         # PIL's own draw.circle has no anti-aliasing, so a small dot comes
         # out visibly jagged — draw it oversized on its own layer and shrink
         # it back down, which blends the edge instead of stair-stepping it.
+        # (Tried using a "•" glyph instead: Jost renders it tiny and shifted
+        # high, and doesn't have "●"/"○"/"‣"/"◦" at all — not usable.)
         scale = 4
         size = radius * 2 * scale
         dot = Image.new("RGBA", (size, size), (0, 0, 0, 0))
