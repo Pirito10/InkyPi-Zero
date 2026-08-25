@@ -26,7 +26,7 @@ SRC_PATH="$SCRIPT_DIR/../src"
 #
 # We expect the type of display as per the WS naming convention.
 WS_TYPE=""
-WS_REQUIREMENTS_FILE="$SCRIPT_DIR/ws-requirements.txt"
+WS_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/waveshare.txt"
 
 # Parse the arguments, requiring the -W option.
 parse_arguments() {

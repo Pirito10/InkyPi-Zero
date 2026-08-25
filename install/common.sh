@@ -16,10 +16,10 @@ SERVICE_FILE="$APPNAME.service"
 SERVICE_FILE_SOURCE="$SCRIPT_DIR/$SERVICE_FILE"
 SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
 
-APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
-CHROMIUM_REQUIREMENTS_FILE="$SCRIPT_DIR/chromium-requirements.txt"
-WEBKITGTK_REQUIREMENTS_FILE="$SCRIPT_DIR/webkitgtk-requirements.txt"
-PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
+APT_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/apt.txt"
+CHROMIUM_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/chromium.txt"
+WEBKITGTK_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/webkitgtk.txt"
+PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/requirements.txt"
 
 echo_success() {
   echo -e "$1 [\e[32m\xE2\x9C\x94\e[0m]"
