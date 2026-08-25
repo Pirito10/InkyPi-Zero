@@ -17,7 +17,6 @@ SERVICE_FILE_SOURCE="$SCRIPT_DIR/$SERVICE_FILE"
 SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
 
 APT_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/apt.txt"
-CHROMIUM_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/chromium.txt"
 WEBKITGTK_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/webkitgtk.txt"
 PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/requirements.txt"
 
@@ -70,18 +69,10 @@ setup_earlyoom_service() {
 }
 
 #
-# calendar renders HTML via a headless browser. Chromium requires NEON, which
-# CPUs like the Pi Zero W's (ARMv6) lack and will fail with "Illegal instruction".
-# Install WebKitGTK instead on those, since it works without NEON (just slower).
+# calendar renders HTML via WebKitGTK, since this board's CPU (ARMv6) lacks
+# the NEON instructions Chromium requires.
 #
 install_browser_dependencies() {
-  if grep -qi neon /proc/cpuinfo 2>/dev/null; then
-    echo "CPU con soporte NEON detectado, instalando Chromium."
-    xargs -a "$CHROMIUM_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
-    show_loader "\tInstalling Chromium. "
-  else
-    echo "CPU sin soporte NEON detectado, instalando WebKitGTK."
-    xargs -a "$WEBKITGTK_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
-    show_loader "\tInstalling WebKitGTK. "
-  fi
+  xargs -a "$WEBKITGTK_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
+  show_loader "\tInstalling WebKitGTK. "
 }
