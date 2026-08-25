@@ -19,6 +19,5 @@
 ## Aplazado, no urgente
 
 - [ ] **Pase de interfaz móvil.** Nunca se ha hecho. Ajustes, Playlists y el dashboard principal ya tienen su diseño definitivo en escritorio — tocaría revisar los tres en móvil.
-- [ ] **Intervalo mínimo de rotación (60s) por debajo de lo que recomienda Waveshare (180s)** para este panel.
 - [ ] **La lista de playlists no se ordena por hora de inicio**, y **no se pueden reordenar los plugins dentro de una playlist** (solo orden de inserción).
 - [ ] **Orientación vertical rompe el layout de `weather`** (encontrado al probar el modo Simple, pero afecta también al Avanzado): el título se solapa con "Última actualización", y en Avanzado la cuadrícula de métricas se solapa con la descripción del tiempo. La cabecera (`draw_weather_header`) y la fila de "hoy" no tienen en cuenta que en vertical la altura disponible es mucho mayor que en horizontal. El dispositivo del regalo está fijo en horizontal, así que no es urgente.
