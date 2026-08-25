@@ -54,13 +54,9 @@ To install InkyPi, follow these steps:
     ```bash
     cd InkyPi
     ```
-3. Run the installation script with sudo, specifying your [Waveshare display model](#waveshare-display-support):
+3. Run the installation script with sudo:
     ```bash
-    sudo bash install/install.sh -W <waveshare device model>
-    ```
-    e.g.:
-    ```bash
-    sudo bash install/install.sh -W epd7in5_V2
+    sudo bash install/install.sh
     ```
 
 

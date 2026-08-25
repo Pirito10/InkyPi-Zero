@@ -5,8 +5,7 @@
 # Description: This script automates the installation of InkyPI and creation of
 #              the InkyPI service.
 #
-# Usage: ./install.sh -W <waveshare_device>
-#        -W <waveshare_device> Waveshare device model type, e.g. epd7in5_V2.
+# Usage: sudo bash install.sh
 # =============================================================================
 
 SOURCE=${BASH_SOURCE[0]}
@@ -20,71 +19,12 @@ SCRIPT_DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 source "$SCRIPT_DIR/common.sh"
 
 SRC_PATH="$SCRIPT_DIR/../src"
-
-#
-# Requirements for Waveshare support.
-#
-# We expect the type of display as per the WS naming convention.
-WS_TYPE=""
 WS_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/waveshare.txt"
-
-# Parse the arguments, requiring the -W option.
-parse_arguments() {
-    while getopts ":W:" opt; do
-        case $opt in
-            W) WS_TYPE=$OPTARG
-                echo "Screen type is: $WS_TYPE"
-                ;;
-            \?) echo "Invalid option: -$OPTARG." >&2
-                exit 1
-                ;;
-            :) echo "Option -$OPTARG requires an the model type of the Waveshare screen." >&2
-               exit 1
-               ;;
-        esac
-    done
-
-    if [[ -z "$WS_TYPE" ]]; then
-        echo "ERROR: -W <waveshare_device> is required, e.g. -W epd7in5_V2." >&2
-        exit 1
-    fi
-}
 
 check_permissions() {
   # Ensure the script is run with sudo
   if [ "$EUID" -ne 0 ]; then
     echo_error "ERROR: Installation requires root privileges. Please run it with sudo."
-    exit 1
-  fi
-}
-
-fetch_waveshare_driver() {
-  echo "Fetching Waveshare driver for: $WS_TYPE"
-
-  DRIVER_DEST="$SRC_PATH/display/waveshare_epd"
-  DRIVER_FILE="$DRIVER_DEST/$WS_TYPE.py"
-  DRIVER_URL="https://raw.githubusercontent.com/waveshareteam/e-Paper/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/$WS_TYPE.py"
-
-  # Attempt to download the file
-  if [ -f "$DRIVER_FILE" ]; then
-    echo_success "\tWaveshare driver '$WS_TYPE.py' already exists at $DRIVER_FILE"
-  elif curl --silent --fail -o "$DRIVER_FILE" "$DRIVER_URL"; then
-    echo_success "\tWaveshare driver '$WS_TYPE.py' successfully downloaded to $DRIVER_FILE"
-  else
-    echo_error "ERROR: Failed to download Waveshare driver '$WS_TYPE.py'."
-    echo_error "Ensure the model name is correct and exists at:"
-    echo_error "https://github.com/waveshareteam/e-Paper/tree/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd"
-    exit 1
-  fi
-
-  EPD_CONFIG_FILE="$DRIVER_DEST/epdconfig.py"
-  EPD_CONFIG_URL="https://raw.githubusercontent.com/waveshareteam/e-Paper/refs/heads/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py"
-  if [ -f "$EPD_CONFIG_FILE" ]; then
-    echo_success "\tWaveshare epdconfig file already exists at $EPD_CONFIG_FILE"
-  elif curl --silent --fail -o "$EPD_CONFIG_FILE" "$EPD_CONFIG_URL"; then
-    echo_success "\tWaveshare epdconfig file successfully downloaded to $EPD_CONFIG_FILE"
-  else
-    echo_error "ERROR: Failed to download Waveshare epdconfig file."
     exit 1
   fi
 }
@@ -172,27 +112,6 @@ install_config() {
   fi
 }
 
-#
-# Update the device.json file with the supplied Waveshare parameter.
-#
-update_config() {
-  local DEVICE_JSON="$CONFIG_DIR/device.json"
-
-  if grep -q '"display_type":' "$DEVICE_JSON"; then
-      # Update existing display_type value
-      sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$WS_TYPE\"/" "$DEVICE_JSON"
-      echo "Updated display_type to: $WS_TYPE"
-  else
-      # Append display_type safely, ensuring proper comma placement
-      if grep -q '}$' "$DEVICE_JSON"; then
-          sed -i '$s/}/,/' "$DEVICE_JSON"  # Replace last } with a comma
-      fi
-      echo "  \"display_type\": \"$WS_TYPE\"" >> "$DEVICE_JSON"
-      echo "}" >> "$DEVICE_JSON"  # Add trailing }
-      echo "Added display_type: $WS_TYPE"
-  fi
-}
-
 stop_service() {
     echo "Checking if $SERVICE_FILE is running"
     if /usr/bin/systemctl is-active --quiet $SERVICE_FILE
@@ -259,10 +178,8 @@ ask_for_reboot() {
   fi
 }
 
-parse_arguments "$@"
 check_permissions
 stop_service
-fetch_waveshare_driver
 enable_interfaces
 install_debian_dependencies
 install_browser_dependencies
@@ -278,7 +195,6 @@ install_src
 create_venv
 install_executable
 install_config
-update_config
 install_app_service
 
 echo "Update JS and CSS files"
