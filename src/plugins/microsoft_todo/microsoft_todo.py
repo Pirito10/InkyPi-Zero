@@ -5,6 +5,7 @@ import requests
 import msal
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from PIL import Image, ImageDraw
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font, resolve_path
 
@@ -26,7 +27,6 @@ GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 TOKEN_CACHE_PATH = resolve_path("config/microsoft_todo_token_cache.json")
 
 MUTED_GRAY = "#999999"
-CIRCLE_COLOR = "#666666"
 
 
 def load_token_cache():
@@ -83,16 +83,16 @@ class MicrosoftTodo(BasePlugin):
             dimensions = dimensions[::-1]
 
         def draw_content(image, draw, content_box, text_color):
-            self.draw_columns(draw, content_box, text_color, columns)
+            self.draw_columns(image, draw, content_box, text_color, columns)
 
         return self.render_image_pil(dimensions, settings, draw_content)
 
-    def draw_columns(self, draw, content_box, text_color, columns):
+    def draw_columns(self, image, draw, content_box, text_color, columns):
         left, top, right, bottom = content_box
 
         if len(columns) == 1:
             list_name, tasks = columns[0]
-            self.draw_tasks(draw, (left, top, right, bottom), text_color, list_name, tasks)
+            self.draw_tasks(image, draw, (left, top, right, bottom), text_color, list_name, tasks)
             return
 
         gap = (right - left) * 0.04
@@ -100,8 +100,8 @@ class MicrosoftTodo(BasePlugin):
         draw.line((mid, top, mid, bottom), fill=MUTED_GRAY, width=1)
 
         (left_name, left_tasks), (right_name, right_tasks) = columns
-        self.draw_tasks(draw, (left, top, mid - gap / 2, bottom), text_color, left_name, left_tasks)
-        self.draw_tasks(draw, (mid + gap / 2, top, right, bottom), text_color, right_name, right_tasks)
+        self.draw_tasks(image, draw, (left, top, mid - gap / 2, bottom), text_color, left_name, left_tasks)
+        self.draw_tasks(image, draw, (mid + gap / 2, top, right, bottom), text_color, right_name, right_tasks)
 
     def get_access_token(self):
         cache = load_token_cache()
@@ -138,7 +138,7 @@ class MicrosoftTodo(BasePlugin):
 
         return list_name, tasks
 
-    def draw_tasks(self, draw, content_box, text_color, list_name, tasks):
+    def draw_tasks(self, image, draw, content_box, text_color, list_name, tasks):
         left, top, right, bottom = content_box
         height = bottom - top
 
@@ -159,15 +159,18 @@ class MicrosoftTodo(BasePlugin):
 
         task_font = get_font("Jost", round(row_h * 0.4))
         due_font = get_font("Jost", round(row_h * 0.28))
-        dot_r = round(row_h * 0.06)
-        text_x = left + dot_r * 4
+        dot_r = round(row_h * 0.09)
+        text_x = left + dot_r * 3.5
 
         y = body_top
         for task in tasks:
             if y + row_h > bottom + 1:  # small tolerance for float rounding when rows are sized to fit exactly
                 break
             row_center = y + row_h / 2
-            draw.circle((left + dot_r, row_center), dot_r, fill=CIRCLE_COLOR)
+            # Nudged down slightly: a geometrically centered dot reads as too
+            # high next to lowercase text, whose visual weight sits below
+            # the midline of the font's full ascender-to-descender box.
+            self.draw_smooth_dot(image, (left + dot_r, row_center + row_h * 0.05), dot_r, text_color)
 
             title = task.get("title") or ""
             due = task.get("dueDateTime")
@@ -188,6 +191,18 @@ class MicrosoftTodo(BasePlugin):
 
             y += row_h
             draw.line((left, y, right, y), fill="#e0e0e0", width=1)
+
+    def draw_smooth_dot(self, image, center, radius, fill):
+        # PIL's own draw.circle has no anti-aliasing, so a small dot comes
+        # out visibly jagged — draw it oversized on its own layer and shrink
+        # it back down, which blends the edge instead of stair-stepping it.
+        scale = 4
+        size = radius * 2 * scale
+        dot = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        ImageDraw.Draw(dot).ellipse((0, 0, size - 1, size - 1), fill=fill)
+        dot = dot.resize((radius * 2, radius * 2), Image.LANCZOS)
+        x, y = center
+        image.paste(dot, (round(x - radius), round(y - radius)), dot)
 
     def truncate_to_width(self, draw, text, font, max_width):
         if draw.textlength(text, font=font) <= max_width:
