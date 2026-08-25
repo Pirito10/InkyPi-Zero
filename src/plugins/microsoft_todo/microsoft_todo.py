@@ -142,27 +142,27 @@ class MicrosoftTodo(BasePlugin):
         left, top, right, bottom = content_box
         height = bottom - top
 
-        title_font = get_font("Jost", round(height * 0.075), font_weight="bold")
-        task_font = get_font("Jost", round(height * 0.05))
-        due_font = get_font("Jost", round(height * 0.038))
+        title_font = get_font("Jost", round(height * 0.08), font_weight="bold")
+        task_font = get_font("Jost", round(height * 0.065))
+        due_font = get_font("Jost", round(height * 0.045))
 
         draw.text((left, top), list_name or "Tareas", font=title_font, fill=text_color, anchor="la")
-        body_top = top + sum(title_font.getmetrics()) * 1.5
+        body_top = top + sum(title_font.getmetrics()) * 1.6
 
         if not tasks:
             draw.text(((left + right) / 2, (body_top + bottom) / 2), "Sin tareas pendientes", font=task_font, fill=MUTED_GRAY, anchor="mm")
             return
 
-        row_h = round(height * 0.11)
-        circle_r = round(height * 0.014)
-        text_x = left + circle_r * 4
+        row_h = min(round(height * 0.21), round((bottom - body_top) / len(tasks)))
+        circle_r = round(height * 0.024)
+        text_x = left + circle_r * 3.2
 
         y = body_top
         for task in tasks:
             if y + row_h > bottom:
                 break
             row_center = y + row_h / 2
-            draw.circle((left + circle_r, row_center), circle_r, outline=CIRCLE_COLOR, width=max(1, round(circle_r * 0.18)))
+            draw.circle((left + circle_r, row_center), circle_r, outline=CIRCLE_COLOR, width=max(2, round(circle_r * 0.16)))
 
             title = task.get("title") or ""
             due = task.get("dueDateTime")
@@ -182,6 +182,7 @@ class MicrosoftTodo(BasePlugin):
                 draw.text((text_x, row_center), title, font=task_font, fill=text_color, anchor="lm")
 
             y += row_h
+            draw.line((left, y, right, y), fill="#e0e0e0", width=1)
 
     def truncate_to_width(self, draw, text, font, max_width):
         if draw.textlength(text, font=font) <= max_width:
