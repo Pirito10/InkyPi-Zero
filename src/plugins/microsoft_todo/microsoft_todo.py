@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 import msal
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font, resolve_path
@@ -61,21 +62,38 @@ class MicrosoftTodo(BasePlugin):
         return template_params
 
     def generate_image(self, settings, device_config):
-        list_id = settings.get("listId")
-        if not list_id:
-            raise RuntimeError("Selecciona una lista de tareas en los ajustes.")
+        list_ids = [id for id in [settings.get("listIdLeft"), settings.get("listIdRight")] if id]
+        if not list_ids:
+            raise RuntimeError("Selecciona al menos una lista de tareas en los ajustes.")
 
         access_token = self.get_access_token()
-        list_name, tasks = self.fetch_list_and_tasks(access_token, list_id)
+        with ThreadPoolExecutor(max_workers=len(list_ids)) as executor:
+            columns = list(executor.map(lambda lid: self.fetch_list_and_tasks(access_token, lid), list_ids))
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
         def draw_content(image, draw, content_box, text_color):
-            self.draw_tasks(draw, content_box, text_color, list_name, tasks)
+            self.draw_columns(draw, content_box, text_color, columns)
 
         return self.render_image_pil(dimensions, settings, draw_content)
+
+    def draw_columns(self, draw, content_box, text_color, columns):
+        left, top, right, bottom = content_box
+
+        if len(columns) == 1:
+            list_name, tasks = columns[0]
+            self.draw_tasks(draw, (left, top, right, bottom), text_color, list_name, tasks)
+            return
+
+        gap = (right - left) * 0.04
+        mid = (left + right) / 2
+        draw.line((mid, top, mid, bottom), fill=MUTED_GRAY, width=1)
+
+        (left_name, left_tasks), (right_name, right_tasks) = columns
+        self.draw_tasks(draw, (left, top, mid - gap / 2, bottom), text_color, left_name, left_tasks)
+        self.draw_tasks(draw, (mid + gap / 2, top, right, bottom), text_color, right_name, right_tasks)
 
     def get_access_token(self):
         cache = load_token_cache()

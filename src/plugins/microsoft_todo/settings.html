@@ -1,7 +1,17 @@
 {% if connected %}
 <div class="form-group">
-    <label for="listId" class="form-label">Lista de tareas:</label>
-    <select id="listId" name="listId" class="form-input">
+    <label for="listIdLeft" class="form-label">Lista de tareas (izquierda):</label>
+    <select id="listIdLeft" name="listIdLeft" class="form-input">
+        {% for list in lists %}
+            <option value="{{ list.id }}">{{ list.displayName }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="listIdRight" class="form-label">Lista de tareas (derecha, opcional):</label>
+    <select id="listIdRight" name="listIdRight" class="form-input">
+        <option value="">Ninguna</option>
         {% for list in lists %}
             <option value="{{ list.id }}">{{ list.displayName }}</option>
         {% endfor %}
@@ -15,9 +25,11 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const listIdInput = document.getElementById('listId');
-        if (loadPluginSettings && listIdInput) {
-            listIdInput.value = pluginSettings.listId;
+        const listIdLeft = document.getElementById('listIdLeft');
+        const listIdRight = document.getElementById('listIdRight');
+        if (loadPluginSettings) {
+            if (listIdLeft) listIdLeft.value = pluginSettings.listIdLeft;
+            if (listIdRight) listIdRight.value = pluginSettings.listIdRight || '';
         }
     });
 </script>
