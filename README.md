@@ -20,8 +20,9 @@ InkyPi is an open-source, customizable E-Ink display powered by a Raspberry Pi. 
 - Clock: Customizable clock faces for displaying time
 - Weather: Display current weather conditions and multi-day forecasts with a customizable layout
 - Calendar: Visualize your calendar from Google, Outlook, or Apple Calendar with customizable layouts
+- Agenda: A compact calendar list and weather combined in one view
 - Countdown: Count down to a date that matters to you
-- To-Do List: Keep a running to-do list on the display
+- Microsoft To Do: Show pending tasks from one or two Microsoft To Do lists
 - Year Progress: Visualize how much of the year has gone by
 
 And additional plugins coming soon! For documentation on building custom plugins, see [Building InkyPi Plugins](./docs/building_plugins.md).
