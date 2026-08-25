@@ -962,17 +962,6 @@ small {
     transition: background-color 0.3s ease;
 }
 
-.api-key-label {
-    background-color: var(--label-bg);
-    color: white;
-    font-style: italic;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    text-align: center;
-    transition: background-color 0.3s ease;
-}
-
 .collapsible {
     width: 100%;
 }

@@ -49,22 +49,9 @@ If the InkyPi service is not running, try manually running the startup script to
 sudo /usr/local/bin/inkypi -d
 ```
 
-## API Key not configured
-
-Some plugins require API Keys to be configured in order to run. These need to be configured in a .env file at the root of the project. See [API Keys](api_keys.md) for details.
-
 ## Clock/Sunset/Sunrise Time is wrong
 
 If the displayed time is incorrect, your timezone setting may not be configured. You can update this in the Settings page of the Web UI.
-
-## Failed to retrieve weather data
-
-```bash
-Failed to retrieve weather data
-ERROR - root - Failed to retrieve weather data: b'{"cod":401, "message": "Please note that using One Call 3.0 requires a separate subscription to the One Call by Call plan. Learn more here https://openweathermap.org/price. If you have a valid subscription to the One Call by Call plan, but still receive this error, then please see https://openweathermap.org/faq#error401 for more info."}'
-```
-
-InkyPi uses the One Call API 3.0 API which requires a subscription but is free for up to 1,000 requests a day. See [API Keys](api_keys.md) for instructions.
 
 ## Waveshare e-Paper EPD Devices
 

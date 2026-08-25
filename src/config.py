@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-from dotenv import load_dotenv
 from model import PlaylistManager, RefreshInfo
 
 logger = logging.getLogger(__name__)
@@ -111,11 +110,6 @@ class Config:
         self.config[key] = value
         if write:
             self.write_config()
-
-    def load_env_key(self, key):
-        """Loads an environment variable using dotenv and returns its value."""
-        load_dotenv(override=True)
-        return os.getenv(key)
 
     def load_playlist_manager(self):
         """Loads the playlist manager object from the config."""
