@@ -57,6 +57,17 @@
   border-right-color: transparent !important;
 }
 
+/* FullCalendar reserves a scrollbar-gutter column in the header row to stay
+   aligned with a body that might scroll — even though .calendar's
+   overflow:hidden means the body here never actually scrolls. Depending on
+   the rendering engine's native scrollbar width, that reserved gutter can
+   throw off the last column just enough to leave a hairline seam between
+   the header and body right above the rightmost day's cells. Forcing the
+   body scroller to never reserve that space keeps both aligned. */
+.fc-scroller {
+  overflow: hidden !important;
+}
+
 th {
   border-top-color: transparent;
   border-right-color: transparent !important;
