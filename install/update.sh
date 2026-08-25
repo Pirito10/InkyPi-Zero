@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Formatting stuff
-bold=$(tput bold)
-normal=$(tput sgr0)
-green=$(tput setaf 2)
-red=$(tput setaf 1)
-
 SOURCE=${BASH_SOURCE[0]}
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
@@ -14,55 +8,7 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 SCRIPT_DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-APPNAME="inkypi"
-INSTALL_PATH="/usr/local/$APPNAME"
-BINPATH="/usr/local/bin"
-VENV_PATH="$INSTALL_PATH/venv_$APPNAME"
-
-SERVICE_FILE="$APPNAME.service"
-SERVICE_FILE_SOURCE="$SCRIPT_DIR/$SERVICE_FILE"
-SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
-
-APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
-CHROMIUM_REQUIREMENTS_FILE="$SCRIPT_DIR/chromium-requirements.txt"
-WEBKITGTK_REQUIREMENTS_FILE="$SCRIPT_DIR/webkitgtk-requirements.txt"
-PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
-
-echo_success() {
-  echo -e "$1 [\e[32m\xE2\x9C\x94\e[0m]"
-}
-
-echo_error() {
-  echo -e "$1 [\e[31m\xE2\x9C\x98\e[0m]\n"
-}
-
-setup_zramswap_service() {
-  echo "Enabling and starting zramswap service."
-  sudo apt-get install -y zram-tools > /dev/null
-  echo -e "ALGO=zstd\nPERCENT=60" | sudo tee /etc/default/zramswap > /dev/null
-  sudo systemctl enable --now zramswap
-}
-
-setup_earlyoom_service() {
-  echo "Enabling and starting earlyoom service."
-  sudo apt-get install -y earlyoom > /dev/null
-  sudo systemctl enable --now earlyoom
-}
-
-#
-# calendar renders HTML via a headless browser. Chromium requires NEON, which
-# CPUs like the Pi Zero W's (ARMv6) lack and will fail with "Illegal instruction".
-# Install WebKitGTK instead on those, since it works without NEON (just slower).
-#
-install_browser_dependencies() {
-  if grep -qi neon /proc/cpuinfo 2>/dev/null; then
-    echo "CPU con soporte NEON detectado, instalando Chromium."
-    xargs -a "$CHROMIUM_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null && echo_success "Installed Chromium."
-  else
-    echo "CPU sin soporte NEON detectado, instalando WebKitGTK."
-    xargs -a "$WEBKITGTK_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null && echo_success "Installed WebKitGTK."
-  fi
-}
+source "$SCRIPT_DIR/common.sh"
 
 update_app_service() {
   echo "Updating $APPNAME systemd service."
@@ -81,12 +27,6 @@ update_cli() {
   cp -r "$SCRIPT_DIR/cli" "$INSTALL_PATH/"
   sudo chmod +x "$INSTALL_PATH/cli/"*
 }
-
-# Get OS release number, e.g. 11=Bullseye, 12=Bookworm, 13=Trixe
-get_os_version() {
-  echo "$(lsb_release -sr)"
-}
-
 
 # Ensure script is run with sudo
 if [ "$EUID" -ne 0 ]; then

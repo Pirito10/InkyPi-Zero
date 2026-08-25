@@ -1,33 +1,16 @@
 #!/bin/bash
 
-# Formatting stuff
-bold=$(tput bold)
-normal=$(tput sgr0)
-red=$(tput setaf 1)
-green=$(tput setaf 2)
+SOURCE=${BASH_SOURCE[0]}
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
+  SOURCE=$(readlink "$SOURCE")
+  [[ $SOURCE != /* ]] && SOURCE=$DIR/$SOURCE
+done
+SCRIPT_DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-APPNAME="inkypi"
-INSTALL_PATH="/usr/local/$APPNAME"
-BINPATH="/usr/local/bin"
-VENV_PATH="$INSTALL_PATH/venv_$APPNAME"
-SERVICE_FILE="/etc/systemd/system/$APPNAME.service"
+source "$SCRIPT_DIR/common.sh"
+
 CONFIG_DIR="$INSTALL_PATH/src/config"
-
-echo_success() {
-  echo -e "$1 [\e[32m\xE2\x9C\x94\e[0m]"
-}
-
-echo_override() {
-  echo -e "\r$1"
-}
-
-echo_header() {
-  echo -e "${bold}$1${normal}"
-}
-
-echo_error() {
-  echo -e "${red}$1${normal} [\e[31m\xE2\x9C\x98\e[0m]\n"
-}
 
 check_permissions() {
   # Ensure the script is run with sudo
@@ -50,9 +33,9 @@ stop_service() {
 
 disable_service() {
   echo "Disabling $APPNAME service"
-  if [ -f "$SERVICE_FILE" ]; then
+  if [ -f "$SERVICE_FILE_TARGET" ]; then
     /usr/bin/systemctl disable "$APPNAME.service"
-    rm -f "$SERVICE_FILE"
+    rm -f "$SERVICE_FILE_TARGET"
     /usr/bin/systemctl daemon-reload
     echo_success "\tService disabled and removed."
   else
