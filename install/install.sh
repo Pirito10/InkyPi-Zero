@@ -34,6 +34,8 @@ SERVICE_FILE_SOURCE="$SCRIPT_DIR/$SERVICE_FILE"
 SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
 
 APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
+CHROMIUM_REQUIREMENTS_FILE="$SCRIPT_DIR/chromium-requirements.txt"
+WEBKITGTK_REQUIREMENTS_FILE="$SCRIPT_DIR/webkitgtk-requirements.txt"
 PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 
 #
@@ -168,13 +170,30 @@ echo_blue() {
 install_debian_dependencies() {
   if [ -f "$APT_REQUIREMENTS_FILE" ]; then
     sudo apt-get update > /dev/null &
-    show_loader "Fetch available system dependencies updates. " 
+    show_loader "Fetch available system dependencies updates. "
 
     xargs -a "$APT_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
     show_loader "Installing system dependencies. "
   else
     echo "ERROR: System dependencies file $APT_REQUIREMENTS_FILE not found!"
     exit 1
+  fi
+}
+
+#
+# calendar renders HTML via a headless browser. Chromium requires NEON, which
+# CPUs like the Pi Zero W's (ARMv6) lack and will fail with "Illegal instruction".
+# Install WebKitGTK instead on those, since it works without NEON (just slower).
+#
+install_browser_dependencies() {
+  if grep -qi neon /proc/cpuinfo 2>/dev/null; then
+    echo "CPU con soporte NEON detectado, instalando Chromium."
+    xargs -a "$CHROMIUM_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
+    show_loader "\tInstalling Chromium. "
+  else
+    echo "CPU sin soporte NEON detectado, instalando WebKitGTK."
+    xargs -a "$WEBKITGTK_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
+    show_loader "\tInstalling WebKitGTK. "
   fi
 }
 
@@ -338,6 +357,7 @@ stop_service
 fetch_waveshare_driver
 enable_interfaces
 install_debian_dependencies
+install_browser_dependencies
 # check OS version for Bookworm to setup zramswap
 if [[ $(get_os_version) = "12" ]] ; then
   echo "OS version is Bookworm - setting up zramswap"

@@ -15,7 +15,6 @@
 ## Bug concreto, arreglo sencillo
 
 - [ ] **Falta `spidev` en `install/ws-requirements.txt`.** El driver real (`epdconfig.py`) hace `import spidev` pero no está listado como dependencia — el servicio se queda en bucle de reinicio nada más instalar en limpio (`ModuleNotFoundError: No module named 'spidev'`). Arreglado a mano en la Pi de pruebas, falta llevarlo al repo.
-- [ ] **Faltan las dependencias de WebKitGTK en los scripts de instalación** (`python3-gi`, `python3-gi-cairo`, `gir1.2-webkit2-4.1`, `xvfb`), necesarias para el fallback de `calendar` cuando Chromium no funciona. Instaladas a mano en la Pi de pruebas, falta llevarlas a `install/ws-requirements.txt` o al script de instalación.
 
 ## Ajustes a código compartido (aplazados a su propia pasada)
 

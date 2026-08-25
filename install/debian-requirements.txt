@@ -5,7 +5,6 @@ python3-pip
 avahi-daemon
 libopenblas-dev
 libopenjp2-7
-chromium-headless-shell
 libfreetype6-dev
 fonts-noto-color-emoji
 swig
