@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 import requests
 import msal
 from concurrent.futures import ThreadPoolExecutor
@@ -62,11 +63,18 @@ class MicrosoftTodo(BasePlugin):
         return template_params
 
     def generate_image(self, settings, device_config):
-        list_ids = [id for id in [settings.get("listIdLeft"), settings.get("listIdRight")] if id]
-        if not list_ids:
-            raise RuntimeError("Selecciona al menos una lista de tareas en los ajustes.")
-
         access_token = self.get_access_token()
+
+        if settings.get("randomLists") == "true":
+            all_lists = self.fetch_lists(access_token)
+            if not all_lists:
+                raise RuntimeError("No hay ninguna lista de tareas en la cuenta conectada.")
+            list_ids = [l["id"] for l in random.sample(all_lists, min(2, len(all_lists)))]
+        else:
+            list_ids = [id for id in [settings.get("listIdLeft"), settings.get("listIdRight")] if id]
+            if not list_ids:
+                raise RuntimeError("Selecciona al menos una lista de tareas en los ajustes.")
+
         with ThreadPoolExecutor(max_workers=len(list_ids)) as executor:
             columns = list(executor.map(lambda lid: self.fetch_list_and_tasks(access_token, lid), list_ids))
 
