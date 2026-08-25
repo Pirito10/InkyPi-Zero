@@ -114,7 +114,7 @@ class MicrosoftTodo(BasePlugin):
 
         accounts = app.get_accounts()
         if not accounts:
-            raise RuntimeError("No hay ninguna cuenta de Microsoft conectada. Ejecuta scripts/connect_microsoft_todo.py.")
+            raise RuntimeError("No hay ninguna cuenta de Microsoft conectada. Ejecuta plugins/microsoft_todo/connect.py.")
 
         result = app.acquire_token_silent(SCOPES, account=accounts[0])
         save_token_cache(cache)
