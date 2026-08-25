@@ -1,5 +1,3 @@
-import fnmatch
-import json
 import logging
 
 from utils.image_utils import resize_image, change_orientation, apply_image_enhancement
@@ -36,13 +34,7 @@ class DisplayManager:
 
         if display_type == "mock":
             self.display = MockDisplay(device_config)
-        elif display_type and fnmatch.fnmatch(display_type, "epd*in*"):
-            # derived from waveshare epd - we assume here that will be consistent
-            # otherwise we will have to enshring the manufacturer in the 
-            # display_type and then have a display_model parameter.  Will leave
-            # that for future use if the need arises.
-            #
-            # see https://github.com/waveshareteam/e-Paper
+        elif display_type == "epd7in5_V2":
             self.display = WaveshareDisplay(device_config)
         else:
             raise ValueError(f"Unsupported display type: {display_type}")

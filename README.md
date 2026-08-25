@@ -54,13 +54,9 @@ To install InkyPi, follow these steps:
     ```bash
     cd InkyPi
     ```
-3. Run the installation script with sudo, specifying your [Waveshare display model](#waveshare-display-support):
+3. Run the installation script with sudo:
     ```bash
-    sudo bash install/install.sh -W <waveshare device model>
-    ```
-    e.g.:
-    ```bash
-    sudo bash install/install.sh -W epd7in5_V2
+    sudo bash install/install.sh
     ```
 
 
@@ -111,7 +107,7 @@ Waveshare e-Paper displays require model-specific drivers from their [Python EPD
 
 This project has been tested with several Waveshare models. **Displays based on the IT8951 controller are not supported**, and **screens smaller than 4 inches are not recommended** due to limited resolution.
 
-If your display model has a corresponding driver in the link above, it’s likely to be compatible. When running the installation script, use the -W option to specify your display model (without the .py extension). The script will automatically fetch and install the correct driver.
+This fork is built and tested specifically for the Waveshare epd7in5_V2 — the driver ships committed in the repo (`src/display/waveshare_epd/`), the installation script no longer takes a display model argument.
 
 ## License
 

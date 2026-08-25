@@ -1,5 +1,10 @@
 {
     "name": "InkyPi",
+    "display_type": "epd7in5_V2",
+    "resolution": [
+        800,
+        480
+    ],
     "orientation": "horizontal",
     "inverted_image": false,
     "scheduler_sleep_time": 60,

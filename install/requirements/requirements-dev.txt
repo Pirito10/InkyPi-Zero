@@ -1,3 +1,5 @@
+# Mirror of requirements.txt, minus cysystemd (Linux-only, not needed for local dev).
+# Keep both in sync by hand when adding/removing a dependency.
 flask==3.1.2
 requests==2.32.5
 urllib3==2.6.3

@@ -13,8 +13,14 @@ RestartSec=60
 KillSignal=SIGINT
 StandardOutput=journal
 StandardError=journal
-CPUQuota=40%
-MemoryMax=200M
+# No CPUQuota: this is a single-core Pi Zero W with nothing else competing
+# for CPU, and WebKitGTK (interpreter-only JS, no JIT) is already slow —
+# throttling it further only makes renders take longer for no benefit.
+#
+# WebKitGTK (the only rendering engine now) has been measured peaking at
+# ~350MB during a calendar render; 200M would cgroup-OOM-kill the service on
+# every render. Needs validating against real usage on hardware.
+MemoryMax=400M
 
 [Install]
 WantedBy=multi-user.target

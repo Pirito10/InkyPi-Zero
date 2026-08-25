@@ -106,17 +106,6 @@ def take_screenshot_html(html_str, dimensions, timeout_ms=None):
 
     return image
 
-def _find_chromium_binary():
-    """Find the first available Chromium-based binary in system PATH."""
-    candidates = ["chromium-headless-shell", "chromium", "chrome"]
-    for candidate in candidates:
-        path = shutil.which(candidate)
-        if path:
-            logger.debug(f"Found browser binary: {candidate} at {path}")
-            return candidate
-    return None
-
-
 def _find_system_python():
     """The webkit_screenshot.py helper needs PyGObject (gi), which is a
     system package tied to the OS's own Python, not something the project's
@@ -128,98 +117,42 @@ def _find_system_python():
     return None
 
 
-def _take_screenshot_chromium(browser, target, dimensions, timeout_ms=None):
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as img_file:
-        img_file_path = img_file.name
-
-    command = [
-        browser,
-        target,
-        "--headless",
-        f"--screenshot={img_file_path}",
-        f"--window-size={dimensions[0]},{dimensions[1]}",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--use-gl=swiftshader",
-        "--hide-scrollbars",
-        "--in-process-gpu",
-        "--js-flags=--jitless",
-        "--disable-zero-copy",
-        "--disable-gpu-memory-buffer-compositor-resources",
-        "--disable-extensions",
-        "--disable-plugins",
-        "--mute-audio",
-        "--renderer-process-limit=1",
-        "--no-zygote",
-        "--no-sandbox"
-    ]
-    if timeout_ms:
-        command.append(f"--timeout={timeout_ms}")
-    result = subprocess.run(command, capture_output=True, check=False)
-
-    if result.returncode != 0 or not os.path.exists(img_file_path):
-        logger.error(f"Failed to take screenshot (return code: {result.returncode})")
-        return None
-
-    with Image.open(img_file_path) as img:
-        image = img.copy()
-    os.remove(img_file_path)
-    return image
-
-
-def _take_screenshot_webkitgtk(target, dimensions, timeout_ms=None):
-    """Fallback for boards Chromium doesn't support (e.g. ARMv6, which lacks
-    the NEON instructions Chromium requires). WebKitGTK still runs there,
-    with JIT disabled, via an interpreter-only JS engine — much slower than
-    Chromium but functional. Needs system Python (see _find_system_python)
-    plus python3-gi, python3-gi-cairo, gir1.2-webkit2-4.1 and xvfb installed.
-    """
-    python_bin = _find_system_python()
-    xvfb_run = shutil.which("xvfb-run")
-    if not python_bin or not xvfb_run:
-        logger.error("WebKitGTK fallback unavailable: need system python3 and xvfb-run installed.")
-        return None
-
-    helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webkit_screenshot.py")
-
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as img_file:
-        img_file_path = img_file.name
-
-    command = [xvfb_run, "-a", python_bin, helper, target, img_file_path, str(dimensions[0]), str(dimensions[1])]
-    if timeout_ms:
-        command.append(str(timeout_ms))
-
-    env = dict(os.environ, WEBKIT_DISABLE_COMPOSITING_MODE="1", LIBGL_ALWAYS_SOFTWARE="1")
-    # WebKitGTK is much slower than Chromium here (interpreter-only JS), so
-    # give it a generous ceiling regardless of the caller's timeout_ms.
-    result = subprocess.run(command, capture_output=True, check=False, env=env, timeout=120)
-
-    if result.returncode != 0 or not os.path.exists(img_file_path):
-        logger.error(f"Failed to take screenshot via WebKitGTK (return code: {result.returncode}): {result.stderr.decode(errors='replace')}")
-        return None
-
-    with Image.open(img_file_path) as img:
-        image = img.copy()
-    os.remove(img_file_path)
-    return image
-
-
 def take_screenshot(target, dimensions, timeout_ms=None):
+    """Renders via WebKitGTK, since this board's CPU (ARMv6) lacks the NEON
+    instructions Chromium requires. WebKitGTK runs fine here, with JIT
+    disabled, via an interpreter-only JS engine — slower than Chromium but
+    functional. Needs system Python (see _find_system_python) plus
+    python3-gi, python3-gi-cairo, gir1.2-webkit2-4.1 and xvfb installed.
+    """
     try:
-        browser = _find_chromium_binary()
-        if browser:
-            image = _take_screenshot_chromium(browser, target, dimensions, timeout_ms)
-            if image:
-                return image
-            # Installed but unusable (e.g. Chromium needs NEON, which older
-            # ARM boards like the Pi Zero W don't have) — fall through rather
-            # than giving up, since a broken binary looks the same as a
-            # missing one from here on.
-            logger.warning("Chromium-based browser found but failed to render, falling back to WebKitGTK.")
-        else:
-            logger.info("No Chromium-based browser found, falling back to WebKitGTK.")
+        python_bin = _find_system_python()
+        xvfb_run = shutil.which("xvfb-run")
+        if not python_bin or not xvfb_run:
+            logger.error("WebKitGTK unavailable: need system python3 and xvfb-run installed.")
+            return None
 
-        return _take_screenshot_webkitgtk(target, dimensions, timeout_ms)
+        helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webkit_screenshot.py")
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as img_file:
+            img_file_path = img_file.name
+
+        command = [xvfb_run, "-a", python_bin, helper, target, img_file_path, str(dimensions[0]), str(dimensions[1])]
+        if timeout_ms:
+            command.append(str(timeout_ms))
+
+        env = dict(os.environ, WEBKIT_DISABLE_COMPOSITING_MODE="1", LIBGL_ALWAYS_SOFTWARE="1")
+        # WebKitGTK is much slower than Chromium here (interpreter-only JS), so
+        # give it a generous ceiling regardless of the caller's timeout_ms.
+        result = subprocess.run(command, capture_output=True, check=False, env=env, timeout=120)
+
+        if result.returncode != 0 or not os.path.exists(img_file_path):
+            logger.error(f"Failed to take screenshot via WebKitGTK (return code: {result.returncode}): {result.stderr.decode(errors='replace')}")
+            return None
+
+        with Image.open(img_file_path) as img:
+            image = img.copy()
+        os.remove(img_file_path)
+        return image
 
     except Exception as e:
         logger.error(f"Failed to take screenshot: {str(e)}")

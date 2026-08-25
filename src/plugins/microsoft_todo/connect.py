@@ -4,7 +4,7 @@ via the OAuth device code flow and saves the resulting token cache to disk.
 
 Run this once per device (locally to test, then again via SSH on the real Pi
 once it's time to connect the recipient's own account). Needs the project's
-venv active with PYTHONPATH set to src/ (see scripts/venv.sh) so `msal` and
+venv active with PYTHONPATH set to src/ (see install/dev.sh) so `msal` and
 the plugins/utils packages are importable.
 """
 import sys

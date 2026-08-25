@@ -5,15 +5,8 @@
 # Description: This script automates the installation of InkyPI and creation of
 #              the InkyPI service.
 #
-# Usage: ./install.sh -W <waveshare_device>
-#        -W <waveshare_device> Waveshare device model type, e.g. epd7in5_V2.
+# Usage: sudo bash install.sh
 # =============================================================================
-
-# Formatting stuff
-bold=$(tput bold)
-normal=$(tput sgr0)
-red=$(tput setaf 1)
-green=$(tput setaf 2)
 
 SOURCE=${BASH_SOURCE[0]}
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
@@ -23,47 +16,10 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 SCRIPT_DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-APPNAME="inkypi"
-INSTALL_PATH="/usr/local/$APPNAME"
+source "$SCRIPT_DIR/common.sh"
+
 SRC_PATH="$SCRIPT_DIR/../src"
-BINPATH="/usr/local/bin"
-VENV_PATH="$INSTALL_PATH/venv_$APPNAME"
-
-SERVICE_FILE="$APPNAME.service"
-SERVICE_FILE_SOURCE="$SCRIPT_DIR/$SERVICE_FILE"
-SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
-
-APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
-PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
-
-#
-# Requirements for Waveshare support.
-#
-# We expect the type of display as per the WS naming convention.
-WS_TYPE=""
-WS_REQUIREMENTS_FILE="$SCRIPT_DIR/ws-requirements.txt"
-
-# Parse the arguments, requiring the -W option.
-parse_arguments() {
-    while getopts ":W:" opt; do
-        case $opt in
-            W) WS_TYPE=$OPTARG
-                echo "Screen type is: $WS_TYPE"
-                ;;
-            \?) echo "Invalid option: -$OPTARG." >&2
-                exit 1
-                ;;
-            :) echo "Option -$OPTARG requires an the model type of the Waveshare screen." >&2
-               exit 1
-               ;;
-        esac
-    done
-
-    if [[ -z "$WS_TYPE" ]]; then
-        echo "ERROR: -W <waveshare_device> is required, e.g. -W epd7in5_V2." >&2
-        exit 1
-    fi
-}
+WS_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements/waveshare.txt"
 
 check_permissions() {
   # Ensure the script is run with sudo
@@ -73,49 +29,12 @@ check_permissions() {
   fi
 }
 
-fetch_waveshare_driver() {
-  echo "Fetching Waveshare driver for: $WS_TYPE"
-
-  DRIVER_DEST="$SRC_PATH/display/waveshare_epd"
-  DRIVER_FILE="$DRIVER_DEST/$WS_TYPE.py"
-  DRIVER_URL="https://raw.githubusercontent.com/waveshareteam/e-Paper/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/$WS_TYPE.py"
-
-  # Attempt to download the file
-  if [ -f "$DRIVER_FILE" ]; then
-    echo_success "\tWaveshare driver '$WS_TYPE.py' already exists at $DRIVER_FILE"
-  elif curl --silent --fail -o "$DRIVER_FILE" "$DRIVER_URL"; then
-    echo_success "\tWaveshare driver '$WS_TYPE.py' successfully downloaded to $DRIVER_FILE"
-  else
-    echo_error "ERROR: Failed to download Waveshare driver '$WS_TYPE.py'."
-    echo_error "Ensure the model name is correct and exists at:"
-    echo_error "https://github.com/waveshareteam/e-Paper/tree/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd"
-    exit 1
-  fi
-
-  EPD_CONFIG_FILE="$DRIVER_DEST/epdconfig.py"
-  EPD_CONFIG_URL="https://raw.githubusercontent.com/waveshareteam/e-Paper/refs/heads/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/epdconfig.py"
-  if [ -f "$EPD_CONFIG_FILE" ]; then
-    echo_success "\tWaveshare epdconfig file already exists at $EPD_CONFIG_FILE"
-  elif curl --silent --fail -o "$EPD_CONFIG_FILE" "$EPD_CONFIG_URL"; then
-    echo_success "\tWaveshare epdconfig file successfully downloaded to $EPD_CONFIG_FILE"
-  else
-    echo_error "ERROR: Failed to download Waveshare epdconfig file."
-    exit 1
-  fi
-}
-
-enable_interfaces(){
-  echo "Enabling interfaces required for $APPNAME"
-  #enable spi
+enable_spi(){
+  echo "Enabling SPI interface required for $APPNAME"
   sudo sed -i 's/^dtparam=spi=.*/dtparam=spi=on/' /boot/firmware/config.txt
   sudo sed -i 's/^#dtparam=spi=.*/dtparam=spi=on/' /boot/firmware/config.txt
   sudo raspi-config nonint do_spi 0
   echo_success "\tSPI Interface has been enabled."
-  #enable i2c
-  sudo sed -i 's/^dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/firmware/config.txt
-  sudo sed -i 's/^#dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/firmware/config.txt
-  sudo raspi-config nonint do_i2c 0
-  echo_success "\tI2C Interface has been enabled."
 
   # Waveshare displays need both CS lines enabled in config.txt.
   echo "Enabling both CS lines for SPI interface in config.txt"
@@ -126,49 +45,14 @@ enable_interfaces(){
   fi
 }
 
-show_loader() {
-  local pid=$!
-  local delay=0.1
-  local spinstr='|/-\'
-  printf "$1 [${spinstr:0:1}] "
-  while ps a | awk '{print $1}' | grep -q "${pid}"; do
-    local temp=${spinstr#?}
-    printf "\r$1 [${temp:0:1}] "
-    spinstr=${temp}${spinstr%"${temp}"}
-    sleep ${delay}
-  done
-  if [[ $? -eq 0 ]]; then
-    printf "\r$1 [\e[32m\xE2\x9C\x94\e[0m]\n"
-  else
-    printf "\r$1 [\e[31m\xE2\x9C\x98\e[0m]\n"
-  fi
-}
-
-echo_success() {
-  echo -e "$1 [\e[32m\xE2\x9C\x94\e[0m]"
-}
-
-echo_override() {
-  echo -e "\r$1"
-}
-
-echo_header() {
-  echo -e "${bold}$1${normal}"
-}
-
-echo_error() {
-  echo -e "${red}$1${normal} [\e[31m\xE2\x9C\x98\e[0m]\n"
-}
-
 echo_blue() {
   echo -e "\e[38;2;65;105;225m$1\e[0m"
 }
 
-
 install_debian_dependencies() {
   if [ -f "$APT_REQUIREMENTS_FILE" ]; then
     sudo apt-get update > /dev/null &
-    show_loader "Fetch available system dependencies updates. " 
+    show_loader "Fetch available system dependencies updates. "
 
     xargs -a "$APT_REQUIREMENTS_FILE" sudo apt-get install -y > /dev/null &
     show_loader "Installing system dependencies. "
@@ -176,19 +60,6 @@ install_debian_dependencies() {
     echo "ERROR: System dependencies file $APT_REQUIREMENTS_FILE not found!"
     exit 1
   fi
-}
-
-setup_zramswap_service() {
-  echo "Enabling and starting zramswap service."
-  sudo apt-get install -y zram-tools > /dev/null
-  echo -e "ALGO=zstd\nPERCENT=60" | sudo tee /etc/default/zramswap > /dev/null
-  sudo systemctl enable --now zramswap
-}
-
-setup_earlyoom_service() {
-  echo "Enabling and starting earlyoom service."
-  sudo apt-get install -y earlyoom > /dev/null
-  sudo systemctl enable --now earlyoom
 }
 
 create_venv(){
@@ -235,27 +106,6 @@ install_config() {
   fi
 }
 
-#
-# Update the device.json file with the supplied Waveshare parameter.
-#
-update_config() {
-  local DEVICE_JSON="$CONFIG_DIR/device.json"
-
-  if grep -q '"display_type":' "$DEVICE_JSON"; then
-      # Update existing display_type value
-      sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$WS_TYPE\"/" "$DEVICE_JSON"
-      echo "Updated display_type to: $WS_TYPE"
-  else
-      # Append display_type safely, ensuring proper comma placement
-      if grep -q '}$' "$DEVICE_JSON"; then
-          sed -i '$s/}/,/' "$DEVICE_JSON"  # Replace last } with a comma
-      fi
-      echo "  \"display_type\": \"$WS_TYPE\"" >> "$DEVICE_JSON"
-      echo "}" >> "$DEVICE_JSON"  # Add trailing }
-      echo "Added display_type: $WS_TYPE"
-  fi
-}
-
 stop_service() {
     echo "Checking if $SERVICE_FILE is running"
     if /usr/bin/systemctl is-active --quiet $SERVICE_FILE
@@ -286,11 +136,6 @@ install_src() {
   show_loader "\tCreating symlink from $SRC_PATH to $INSTALL_PATH/src"
 }
 
-install_cli() {
-  cp -r "$SCRIPT_DIR/cli" "$INSTALL_PATH/"
-  sudo chmod +x "$INSTALL_PATH/cli/"*
-}
-
 # Get Raspberry Pi hostname
 get_hostname() {
   echo "$(hostname)"
@@ -300,11 +145,6 @@ get_hostname() {
 get_ip_address() {
   ip_address=$(hostname -I | awk '{print $1}')
   echo "$ip_address"
-}
-
-# Get OS release number, e.g. 11=Bullseye, 12=Bookworm, 13=Trixe
-get_os_version() {
-  echo "$(lsb_release -sr)"
 }
 
 ask_for_reboot() {
@@ -332,12 +172,11 @@ ask_for_reboot() {
   fi
 }
 
-parse_arguments "$@"
 check_permissions
 stop_service
-fetch_waveshare_driver
-enable_interfaces
+enable_spi
 install_debian_dependencies
+install_browser_dependencies
 # check OS version for Bookworm to setup zramswap
 if [[ $(get_os_version) = "12" ]] ; then
   echo "OS version is Bookworm - setting up zramswap"
@@ -347,11 +186,9 @@ else
 fi
 setup_earlyoom_service
 install_src
-install_cli
 create_venv
 install_executable
 install_config
-update_config
 install_app_service
 
 echo "Update JS and CSS files"
