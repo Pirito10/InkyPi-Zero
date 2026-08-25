@@ -23,11 +23,6 @@ update_app_service() {
   fi
 }
 
-update_cli() {
-  cp -r "$SCRIPT_DIR/cli" "$INSTALL_PATH/"
-  sudo chmod +x "$INSTALL_PATH/cli/"*
-}
-
 # Ensure script is run with sudo
 if [ "$EUID" -ne 0 ]; then
   echo_error "ERROR: This script requires root privileges. Please run it with sudo."
@@ -84,6 +79,5 @@ echo "Update JS and CSS files"
 bash $SCRIPT_DIR/update_vendors.sh > /dev/null
 
 update_app_service
-update_cli
 
 echo_success "Update completed."
