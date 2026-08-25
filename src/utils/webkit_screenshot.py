@@ -3,10 +3,9 @@
 
 Runs under the system Python (needs PyGObject/gi, not the project venv) and
 a virtual display (Xvfb), since neither GTK nor WebKitGTK can render without
-some display server, even for an off-screen capture. Used as a fallback for
-take_screenshot() in image_utils.py on hardware where no Chromium-based
-browser is available (e.g. ARMv6 boards, which Chromium has dropped support
-for since it requires NEON).
+some display server, even for an off-screen capture. Called by
+take_screenshot() in image_utils.py, since this board's CPU (ARMv6) lacks
+the NEON instructions Chromium requires.
 
 Usage: webkit_screenshot.py <html_file> <out_png> <width> <height> [timeout_ms]
 """

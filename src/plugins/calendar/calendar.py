@@ -69,11 +69,12 @@ class Calendar(BasePlugin):
 
         # FullCalendar's own contentHeight/height:'100%' measures its
         # container via JS at render time to compute row heights — this
-        # works in Chromium but not in WebKitGTK (used as a fallback on
-        # boards Chromium can't run on), where it reads a stale/wrong value
-        # and lets content overflow uncapped. Passing a plain pixel number
-        # sidesteps that measurement entirely. Matches base_plugin.html's
-        # `padding: 1.5vw` on <body>, which eats into both dimensions.
+        # works in Chromium but not in WebKitGTK (what we render with, since
+        # this board's CPU can't run Chromium), where it reads a stale/wrong
+        # value and lets content overflow uncapped. Passing a plain pixel
+        # number sidesteps that measurement entirely. Matches
+        # base_plugin.html's `padding: 1.5vw` on <body>, which eats into
+        # both dimensions.
         body_padding = round(dimensions[0] * 0.015)
         fc_height = dimensions[1] - 2 * body_padding
 
