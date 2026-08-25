@@ -64,9 +64,13 @@ class MicrosoftTodo(BasePlugin):
 
     def generate_image(self, settings, device_config):
         access_token = self.get_access_token()
+        # Fetched once regardless of mode: needed to pick from in random
+        # mode, and reused here for display names either way instead of
+        # asking the Graph API for each list's details separately.
+        all_lists = self.fetch_lists(access_token)
+        list_names = {l["id"]: l.get("displayName", "") for l in all_lists}
 
         if settings.get("randomLists") == "true":
-            all_lists = self.fetch_lists(access_token)
             if not all_lists:
                 raise RuntimeError("No hay ninguna lista de tareas en la cuenta conectada.")
             list_ids = [l["id"] for l in random.sample(all_lists, min(2, len(all_lists)))]
@@ -76,7 +80,8 @@ class MicrosoftTodo(BasePlugin):
                 raise RuntimeError("Selecciona al menos una lista de tareas en los ajustes.")
 
         with ThreadPoolExecutor(max_workers=len(list_ids)) as executor:
-            columns = list(executor.map(lambda lid: self.fetch_list_and_tasks(access_token, lid), list_ids))
+            tasks_per_list = list(executor.map(lambda lid: self.fetch_tasks(access_token, lid), list_ids))
+        columns = [(list_names.get(lid, ""), tasks) for lid, tasks in zip(list_ids, tasks_per_list)]
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
@@ -120,30 +125,30 @@ class MicrosoftTodo(BasePlugin):
 
     def fetch_lists(self, access_token):
         headers = {"Authorization": f"Bearer {access_token}"}
-        response = requests.get(f"{GRAPH_BASE}/me/todo/lists", headers=headers, timeout=30)
-        response.raise_for_status()
+        try:
+            response = requests.get(f"{GRAPH_BASE}/me/todo/lists", headers=headers, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(f"No se pudieron obtener las listas de Microsoft To Do: {str(e)}")
         return response.json().get("value", [])
 
-    def fetch_list_and_tasks(self, access_token, list_id):
+    def fetch_tasks(self, access_token, list_id):
         headers = {"Authorization": f"Bearer {access_token}"}
-
-        list_response = requests.get(f"{GRAPH_BASE}/me/todo/lists/{list_id}", headers=headers, timeout=30)
-        list_response.raise_for_status()
-        list_name = list_response.json().get("displayName", "")
-
         params = {"$filter": "status ne 'completed'", "$orderby": "createdDateTime"}
-        tasks_response = requests.get(f"{GRAPH_BASE}/me/todo/lists/{list_id}/tasks", headers=headers, params=params, timeout=30)
-        tasks_response.raise_for_status()
-        tasks = tasks_response.json().get("value", [])
-
-        return list_name, tasks
+        try:
+            response = requests.get(f"{GRAPH_BASE}/me/todo/lists/{list_id}/tasks", headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(f"No se pudieron obtener las tareas de Microsoft To Do (¿la lista sigue existiendo?): {str(e)}")
+        return response.json().get("value", [])
 
     def draw_tasks(self, image, draw, content_box, text_color, list_name, tasks):
         left, top, right, bottom = content_box
         height = bottom - top
 
         title_font = get_font("Jost", round(height * 0.08), font_weight="bold")
-        draw.text(((left + right) / 2, top), list_name or "Tareas", font=title_font, fill=text_color, anchor="ma")
+        title = self.truncate_to_width(draw, list_name or "Tareas", title_font, right - left)
+        draw.text(((left + right) / 2, top), title, font=title_font, fill=text_color, anchor="ma")
         body_top = top + sum(title_font.getmetrics()) * 1.6
 
         if not tasks:
