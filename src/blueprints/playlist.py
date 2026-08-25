@@ -90,8 +90,8 @@ def _parse_cycle_interval(data):
         raise ValueError("El intervalo de rotación es obligatorio")
 
     cycle_interval_seconds = calculate_seconds(int(interval), unit)
-    if cycle_interval_seconds > 86400 or cycle_interval_seconds <= 0:
-        raise ValueError("El intervalo de rotación debe ser menor de 24 horas")
+    if cycle_interval_seconds > 86400 or cycle_interval_seconds < 180:
+        raise ValueError("El intervalo de rotación debe estar entre 180 segundos y 24 horas")
 
     return cycle_interval_seconds
 
