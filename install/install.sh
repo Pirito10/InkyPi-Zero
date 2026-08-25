@@ -29,18 +29,12 @@ check_permissions() {
   fi
 }
 
-enable_interfaces(){
-  echo "Enabling interfaces required for $APPNAME"
-  #enable spi
+enable_spi(){
+  echo "Enabling SPI interface required for $APPNAME"
   sudo sed -i 's/^dtparam=spi=.*/dtparam=spi=on/' /boot/firmware/config.txt
   sudo sed -i 's/^#dtparam=spi=.*/dtparam=spi=on/' /boot/firmware/config.txt
   sudo raspi-config nonint do_spi 0
   echo_success "\tSPI Interface has been enabled."
-  #enable i2c
-  sudo sed -i 's/^dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/firmware/config.txt
-  sudo sed -i 's/^#dtparam=i2c_arm=.*/dtparam=i2c_arm=on/' /boot/firmware/config.txt
-  sudo raspi-config nonint do_i2c 0
-  echo_success "\tI2C Interface has been enabled."
 
   # Waveshare displays need both CS lines enabled in config.txt.
   echo "Enabling both CS lines for SPI interface in config.txt"
@@ -180,7 +174,7 @@ ask_for_reboot() {
 
 check_permissions
 stop_service
-enable_interfaces
+enable_spi
 install_debian_dependencies
 install_browser_dependencies
 # check OS version for Bookworm to setup zramswap
