@@ -1,0 +1,57 @@
+{% if connected %}
+<div class="form-group">
+    <input type="checkbox" id="randomLists" name="randomLists" value="true" onclick="this.value=this.checked ? 'true' : 'false'; toggleListPickers();">
+    <span>Elegir listas al azar en cada actualización</span>
+</div>
+
+<div id="fixed-lists-group">
+    <div class="form-group">
+        <label for="listIdLeft" class="form-label">Lista de tareas (izquierda):</label>
+        <select id="listIdLeft" name="listIdLeft" class="form-input">
+            {% for list in lists %}
+                <option value="{{ list.id }}">{{ list.displayName }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="listIdRight" class="form-label">Lista de tareas (derecha, opcional):</label>
+        <select id="listIdRight" name="listIdRight" class="form-input">
+            <option value="">Ninguna</option>
+            {% for list in lists %}
+                <option value="{{ list.id }}">{{ list.displayName }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% else %}
+<div class="form-group">
+    <p>No se ha podido conectar con Microsoft To Do. Ejecuta <code>scripts/connect_microsoft_todo.py</code> en el servidor para autorizar la cuenta, y vuelve a abrir estos ajustes.</p>
+</div>
+{% endif %}
+
+<script>
+    function toggleListPickers() {
+        const isRandom = document.getElementById('randomLists').checked;
+        const group = document.getElementById('fixed-lists-group');
+        group.style.display = isRandom ? 'none' : '';
+        group.querySelectorAll('select').forEach(select => {
+            select.disabled = isRandom;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const randomLists = document.getElementById('randomLists');
+        const listIdLeft = document.getElementById('listIdLeft');
+        const listIdRight = document.getElementById('listIdRight');
+        if (loadPluginSettings) {
+            if (randomLists) {
+                randomLists.checked = pluginSettings.randomLists == 'true';
+                randomLists.value = pluginSettings.randomLists == 'true' ? 'true' : 'false';
+            }
+            if (listIdLeft) listIdLeft.value = pluginSettings.listIdLeft;
+            if (listIdRight) listIdRight.value = pluginSettings.listIdRight || '';
+        }
+        if (randomLists) toggleListPickers();
+    });
+</script>
