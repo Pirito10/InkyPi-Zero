@@ -2,9 +2,8 @@ from flask import Blueprint, request, jsonify, current_app, render_template
 from utils.time_utils import calculate_seconds, parse_refresh_interval_seconds, MIN_REFRESH_INTERVAL_SECONDS
 import json
 from datetime import datetime, timedelta
-import os
 import logging
-from utils.app_utils import resolve_path, handle_request_files, parse_form
+from utils.app_utils import handle_request_files, parse_form
 
 
 logger = logging.getLogger(__name__)
