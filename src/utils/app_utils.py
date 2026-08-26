@@ -1,8 +1,8 @@
 import logging
 import os
 import socket
-import subprocess
 
+from functools import lru_cache
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -33,13 +33,6 @@ FONT_FAMILIES = {
     }]
 }
 
-FONTS = {
-    "ds-gigi": "DS-DIGI.TTF",
-    "napoli": "Napoli.ttf",
-    "jost": "Jost.ttf",
-    "jost-semibold": "Jost-SemiBold.ttf"
-}
-
 def resolve_path(file_path):
     src_dir = os.getenv("SRC_DIR")
     if src_dir is None:
@@ -55,22 +48,7 @@ def get_ip_address():
         ip_address = s.getsockname()[0]
     return ip_address
 
-def get_wifi_name():
-    try:
-        output = subprocess.check_output(['iwgetid', '-r']).decode('utf-8').strip()
-        return output
-    except subprocess.CalledProcessError:
-        return None
-
-def is_connected():
-    """Check if the Raspberry Pi has an internet connection."""
-    try:
-        # Try to connect to Google's public DNS server
-        socket.create_connection(("8.8.8.8", 53), timeout=2)
-        return True
-    except OSError:
-        return False
-
+@lru_cache(maxsize=None)
 def get_font(font_name, font_size=50, font_weight="normal"):
     if font_name in FONT_FAMILIES:
         font_variants = FONT_FAMILIES[font_name]
@@ -100,9 +78,6 @@ def get_fonts():
                 "font_style": variant.get("font-style", "normal"),
             })
     return fonts_list
-
-def get_font_path(font_name):
-    return resolve_path(os.path.join("static", "fonts", FONTS[font_name]))
 
 def generate_startup_image(dimensions=(800,480)):
     bg_color = (255,255,255)
@@ -142,7 +117,8 @@ def parse_form(request_form):
             request_dict[key] = request_form.getlist(key)
     return request_dict
 
-def handle_request_files(request_files, form_data={}):
+def handle_request_files(request_files, form_data=None):
+    form_data = form_data or {}
     allowed_file_extensions = {'pdf', 'png', 'avif', 'jpg', 'jpeg', 'gif', 'webp', 'heif', 'heic'}
     file_location_map = {}
     # handle existing file locations being provided as part of the form data
