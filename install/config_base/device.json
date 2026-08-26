@@ -7,6 +7,7 @@
     ],
     "orientation": "horizontal",
     "inverted_image": false,
+    "color_mode": "grayscale",
     "scheduler_sleep_time": 60,
     "startup": true,
     "timezone": "Europe/Madrid",
