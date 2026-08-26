@@ -47,14 +47,8 @@ class DisplayManager:
         Args:
             image (PIL.Image): The image to be displayed.
             image_settings (list, optional): List of settings to modify image rendering.
-
-        Raises:
-            ValueError: If no valid display instance is found.
         """
 
-        if not hasattr(self, "display"):
-            raise ValueError("No valid display instance initialized.")
-        
         # Save the image
         logger.info(f"Saving image to {self.device_config.current_image_file}")
         image.save(self.device_config.current_image_file)
@@ -71,7 +65,4 @@ class DisplayManager:
     def clear_and_sleep(self):
         """Clears the screen and puts the display to sleep, ready for
         long-term storage or a safe power-off."""
-        if not hasattr(self, "display"):
-            raise ValueError("No valid display instance initialized.")
-
         self.display.clear_and_sleep()
