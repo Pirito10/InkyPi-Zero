@@ -70,9 +70,11 @@ def image(plugin_id, filename):
     # Construct the full path to the plugin's file
     plugin_dir = os.path.join(plugins_dir, plugin_id)
 
-    # Security check to prevent directory traversal
+    # Security check to prevent directory traversal. The trailing sep matters:
+    # without it, a sibling directory like "pluginsEVIL" would also pass a
+    # plain startswith() check against "plugins".
     safe_path = os.path.abspath(os.path.join(plugin_dir, filename))
-    if not safe_path.startswith(os.path.abspath(plugins_dir)):
+    if not safe_path.startswith(os.path.abspath(plugins_dir) + os.sep):
         return "Invalid path", 403
 
     # Convert to absolute path for send_from_directory
