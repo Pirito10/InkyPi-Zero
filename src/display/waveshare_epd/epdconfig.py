@@ -76,14 +76,12 @@ class RaspberryPi:
                 self.GPIO_PWR_PIN.off()
 
     def digital_read(self, pin):
+        # epd7in5_V2.py only ever calls this with BUSY_PIN. The RST/DC/PWR
+        # branches from Waveshare's original were dead in practice and buggy
+        # (self.RST_PIN etc. are the plain int pin numbers, not the
+        # GPIO_*_PIN gpiozero objects — they'd raise AttributeError if hit).
         if pin == self.BUSY_PIN:
             return self.GPIO_BUSY_PIN.value
-        elif pin == self.RST_PIN:
-            return self.RST_PIN.value
-        elif pin == self.DC_PIN:
-            return self.DC_PIN.value
-        elif pin == self.PWR_PIN:
-            return self.PWR_PIN.value
 
     def delay_ms(self, delaytime):
         time.sleep(delaytime / 1000.0)
