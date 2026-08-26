@@ -81,6 +81,8 @@ class WaveshareDisplay(AbstractDisplay):
         can damage it beyond repair).
         """
         logger.info("Clearing Waveshare display and putting it to sleep.")
-        self.epd_display.init()
+        # init_4Gray, not init: matches the init the panel actually runs under
+        # in display_image(), the one path already verified to work.
+        self.epd_display.init_4Gray()
         self.epd_display.Clear()
         self.epd_display.sleep()
