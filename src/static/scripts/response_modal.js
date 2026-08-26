@@ -1,7 +1,6 @@
 // Function to Show the Response Modal
 function showResponseModal(status, message) {
     const modal = document.getElementById('responseModal');
-    const modalContent = document.getElementById('modalContent');
     const modalMessage = document.getElementById('modalMessage');
 
     // Remove any previous status classes
