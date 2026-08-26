@@ -425,6 +425,32 @@ small {
     box-shadow: 0 0 0 2px var(--input-focus);
 }
 
+/* Custom select arrow. Shared here (rather than in a page-specific stylesheet)
+   because refresh_settings_form.html, which uses these classes, is included
+   from plugin.html too, and plugin.html only loads main.css. */
+.select-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.select-wrapper select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2.2rem;
+}
+
+.select-chevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
 /* Toggle Container */
 .toggle-container {
     display: inline-block;
