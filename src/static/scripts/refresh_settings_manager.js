@@ -3,6 +3,9 @@
  * Handles: modal display, prepopulation, form submission, and validation
  */
 class RefreshSettingsManager {
+    // Waveshare recommends refreshing the panel no more often than every 180s.
+    static MIN_INTERVAL_SECONDS = 180;
+
     /**
      * @param {string} modalId - ID of the modal element
      * @param {string} prefix - Prefix for form field IDs (e.g., 'add', 'edit', 'modal')
@@ -89,6 +92,33 @@ class RefreshSettingsManager {
         this.inputScheduled.addEventListener('focus', () => (this.radioScheduled.checked = true));
         if (this.selectUnit) {
             this.selectUnit.addEventListener('focus', () => (this.radioInterval.checked = true));
+            this.selectUnit.addEventListener('change', () => this.updateIntervalMin());
+            this.updateIntervalMin();
+        }
+    }
+
+    /**
+     * Convert a value + unit into seconds.
+     * @param {number} value
+     * @param {string} unit - 'minute' | 'hour' | 'day'
+     * @returns {number}
+     */
+    unitToSeconds(value, unit) {
+        const multipliers = { minute: 60, hour: 3600, day: 86400 };
+        return value * (multipliers[unit] || 60);
+    }
+
+    /**
+     * Keep the interval input's min attribute in sync with the selected
+     * unit, so it can never be set below MIN_INTERVAL_SECONDS.
+     */
+    updateIntervalMin() {
+        const unit = this.selectUnit.value;
+        const min = Math.ceil(RefreshSettingsManager.MIN_INTERVAL_SECONDS / this.unitToSeconds(1, unit));
+
+        this.inputInterval.min = min;
+        if (Number(this.inputInterval.value) < min) {
+            this.inputInterval.value = min;
         }
     }
 
@@ -123,6 +153,7 @@ class RefreshSettingsManager {
             this.radioInterval.checked = true;
             this.inputInterval.value = value;
             this.selectUnit.value = unit;
+            this.updateIntervalMin();
         } else if (refreshSettings.scheduled) {
             this.radioScheduled.checked = true;
             this.inputScheduled.value = refreshSettings.scheduled;
@@ -163,6 +194,10 @@ class RefreshSettingsManager {
             }
             if (!data.unit) {
                 return { valid: false, error: 'Please select a time unit' };
+            }
+            const seconds = this.unitToSeconds(Number(data.interval), data.unit);
+            if (seconds < RefreshSettingsManager.MIN_INTERVAL_SECONDS) {
+                return { valid: false, error: `El intervalo debe ser de al menos ${RefreshSettingsManager.MIN_INTERVAL_SECONDS} segundos` };
             }
         } else if (data.refreshType === 'scheduled') {
             if (!data.refreshTime) {
