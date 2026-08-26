@@ -78,8 +78,9 @@
         }
 
         async function displayPluginInstance(playlistName, pluginId, pluginInstance) {
-            const loadingIndicator = document.getElementById(pluginInstance)?.querySelector('.loading-indicator');
-            loadingIndicator.style.display = 'block';
+            // id is plugin_id + instance name: two different plugin types can share an instance name.
+            const loadingIndicator = document.getElementById(`${pluginId}-${pluginInstance}`)?.querySelector('.loading-indicator');
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
             try {
                 const response = await fetch("{{ url_for('plugin.display_plugin_instance') }}", {
                     method: 'POST',
@@ -387,7 +388,7 @@
                     <div class="plugin-list">
                         {% for plugin_instance in playlist.plugins %}
                         <div class="plugin-item">
-                            <div class="plugin-info" id="{{plugin_instance.name}}">
+                            <div class="plugin-info" id="{{plugin_instance.plugin_id}}-{{plugin_instance.name}}">
                                 <img src="{{ url_for('plugin.image', plugin_id=plugin_instance.plugin_id, filename='icon.png') }}" alt="icono del plugin" class="plugin-icon">
                                 <span class="plugin-instance">{{ plugin_instance.name }}</span>
 
@@ -411,7 +412,7 @@
                                     Mostrándose ahora
                                 </span>
                                 {% endif %}
-                                <div id="loadingIndicator" class="loading-indicator small left-align"></div>
+                                <div class="loading-indicator small left-align"></div>
 
                             </div>
                             <div class="plugin-actions">
