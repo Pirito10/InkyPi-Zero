@@ -72,3 +72,17 @@ class WaveshareDisplay(AbstractDisplay):
         # Put device into low power mode (EPD displays maintain image when powered off)
         logger.info("Putting Waveshare display into sleep mode for power saving.")
         self.epd_display.sleep()
+
+    def clear_and_sleep(self):
+        """
+        Clears the panel to white and puts it to sleep — the manufacturer's
+        recommended state before disconnecting power or long-term storage
+        (leaving the panel powered on with an image displayed indefinitely
+        can damage it beyond repair).
+        """
+        logger.info("Clearing Waveshare display and putting it to sleep.")
+        # init_4Gray, not init: matches the init the panel actually runs under
+        # in display_image(), the one path already verified to work.
+        self.epd_display.init_4Gray()
+        self.epd_display.Clear()
+        self.epd_display.sleep()

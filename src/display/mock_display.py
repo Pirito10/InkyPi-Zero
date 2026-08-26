@@ -27,3 +27,7 @@ class MockDisplay(AbstractDisplay):
         
         # Also save as latest.png for convenience
         image.save(os.path.join(self.output_dir, 'latest.png'), "PNG")
+
+    def clear_and_sleep(self):
+        """No-op for development: no real hardware to clear or sleep."""
+        logger.info("Mock display: clear_and_sleep (no-op)")

@@ -67,3 +67,11 @@ class DisplayManager:
 
         # Pass to the concrete instance to render to the device.
         self.display.display_image(image, image_settings)
+
+    def clear_and_sleep(self):
+        """Clears the screen and puts the display to sleep, ready for
+        long-term storage or a safe power-off."""
+        if not hasattr(self, "display"):
+            raise ValueError("No valid display instance initialized.")
+
+        self.display.clear_and_sleep()

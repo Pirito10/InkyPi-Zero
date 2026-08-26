@@ -43,3 +43,14 @@ class AbstractDisplay:
             NotImplementedError: If not implemented in a subclass.
         """
         raise NotImplementedError("Method 'display_image(...) must be provided in a subclass.")
+
+    def clear_and_sleep(self):
+        """
+        Abstract method to clear the screen and put the display to sleep —
+        the manufacturer-recommended state before disconnecting power or
+        long-term storage.
+
+        Raises:
+            NotImplementedError: If not implemented in a subclass.
+        """
+        raise NotImplementedError("Method 'clear_and_sleep(...) must be provided in a subclass.")

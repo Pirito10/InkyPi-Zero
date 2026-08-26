@@ -71,8 +71,21 @@ def shutdown():
         os.system("sudo reboot")
     else:
         logger.info("Shutdown requested")
+        display_manager = current_app.config['DISPLAY_MANAGER']
+        display_manager.clear_and_sleep()
         os.system("sudo shutdown -h now")
     return jsonify({"success": True})
+
+@settings_bp.route('/clear_display', methods=['POST'])
+def clear_display():
+    """Clears the screen and puts the display to sleep, per the manufacturer's
+    guidance for long-term storage or safe disconnection."""
+    try:
+        display_manager = current_app.config['DISPLAY_MANAGER']
+        display_manager.clear_and_sleep()
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+    return jsonify({"success": True, "message": "Pantalla apagada."})
 
 @settings_bp.route('/download-logs')
 def download_logs():

@@ -45,6 +45,23 @@
             header.closest('.settings-section').classList.toggle('open');
         }
 
+        async function handleClearDisplay() {
+            try {
+                const response = await fetch("{{ url_for('settings.clear_display') }}", {
+                    method: 'POST',
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showResponseModal('success', `¡Éxito! ${result.message}`);
+                } else {
+                    showResponseModal('failure', `¡Error! ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Se ha producido un error al procesar tu solicitud.');
+            }
+        }
+
         async function handleShutdown(reboot) {
             if (reboot) {
                 showResponseModal('success', 'El sistema se está reiniciando. La interfaz no estará disponible hasta que el reinicio termine.');
@@ -83,6 +100,10 @@
                     <h1 class="app-title">Configuración</h1>
                 </div>
                 <div class="header-actions">
+                    <button class="header-button" style="background-color: #1E88E5; color: #fff;" onclick="handleClearDisplay()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Apagar pantalla
+                    </button>
                     <button class="header-button" style="background-color: #FFD600; color: #333;" onclick="handleShutdown(true)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                         Reiniciar
