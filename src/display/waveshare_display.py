@@ -59,15 +59,18 @@ class WaveshareDisplay(AbstractDisplay):
         if not image:
             raise ValueError(f"No image provided.")
 
-        # Assume device was in sleep mode.
-        self.epd_display.init_4Gray()
-
-        # Clear residual pixels before updating the image.
-        self.epd_display.Clear()
-
-        # Display the image on the WS display.
-        gray_image = quantize_to_4_gray(image, self.epd_display)
-        self.epd_display.display_4Gray(self.epd_display.getbuffer_4Gray(gray_image))
+        # "bw" trades the 1-bit panel's deeper black for losing gray shading
+        # entirely — some prefer that contrast over 4-gray's lighter black
+        # (see TODO.md). Assume device was in sleep mode either way.
+        if self.device_config.get_config("color_mode") == "bw":
+            self.epd_display.init()
+            self.epd_display.Clear()
+            self.epd_display.display(self.epd_display.getbuffer(image))
+        else:
+            self.epd_display.init_4Gray()
+            self.epd_display.Clear()
+            gray_image = quantize_to_4_gray(image, self.epd_display)
+            self.epd_display.display_4Gray(self.epd_display.getbuffer_4Gray(gray_image))
 
         # Put device into low power mode (EPD displays maintain image when powered off)
         logger.info("Putting Waveshare display into sleep mode for power saving.")
@@ -81,8 +84,11 @@ class WaveshareDisplay(AbstractDisplay):
         can damage it beyond repair).
         """
         logger.info("Clearing Waveshare display and putting it to sleep.")
-        # init_4Gray, not init: matches the init the panel actually runs under
-        # in display_image(), the one path already verified to work.
-        self.epd_display.init_4Gray()
+        # Match whichever init display_image() would use, since Clear()'s
+        # actual voltage sequence depends on which init set up the panel.
+        if self.device_config.get_config("color_mode") == "bw":
+            self.epd_display.init()
+        else:
+            self.epd_display.init_4Gray()
         self.epd_display.Clear()
         self.epd_display.sleep()
