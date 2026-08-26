@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, render_template, send_file
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 main_bp = Blueprint("main", __name__)
 
@@ -19,20 +20,20 @@ def get_current_image():
     
     # Get the file's last modified time (truncate to seconds to match HTTP header precision)
     file_mtime = int(os.path.getmtime(image_path))
-    last_modified = datetime.fromtimestamp(file_mtime)
-    
+    last_modified = datetime.fromtimestamp(file_mtime, tz=timezone.utc)
+
     # Check If-Modified-Since header
     if_modified_since = request.headers.get('If-Modified-Since')
     if if_modified_since:
         try:
-            # Parse the If-Modified-Since header
-            client_mtime = datetime.strptime(if_modified_since, '%a, %d %b %Y %H:%M:%S %Z')
+            # Parse the If-Modified-Since header (RFC 2822/HTTP-date, always GMT)
+            client_mtime = parsedate_to_datetime(if_modified_since)
             client_mtime_seconds = int(client_mtime.timestamp())
-            
+
             # Compare (both now in seconds, no sub-second precision)
             if file_mtime <= client_mtime_seconds:
                 return '', 304
-        except (ValueError, AttributeError):
+        except (ValueError, TypeError):
             pass
     
     # Send the file with Last-Modified header

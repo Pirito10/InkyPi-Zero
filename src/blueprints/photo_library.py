@@ -76,11 +76,6 @@ def photo_library_page():
     return render_template('photo_library.html', photos=list_library_photos())
 
 
-@photo_library_bp.route('/photo-library/list')
-def photo_library_list():
-    return jsonify({"photos": list_library_photos()})
-
-
 @photo_library_bp.route('/photo-library/upload', methods=['POST'])
 def photo_library_upload():
     library_dir = get_library_dir()
