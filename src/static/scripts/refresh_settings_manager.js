@@ -152,8 +152,10 @@ class RefreshSettingsManager {
             const { value, unit } = this.secondsToUnit(refreshSettings.interval);
             this.radioInterval.checked = true;
             this.inputInterval.value = value;
-            this.selectUnit.value = unit;
-            this.updateIntervalMin();
+            if (this.selectUnit) {
+                this.selectUnit.value = unit;
+                this.updateIntervalMin();
+            }
         } else if (refreshSettings.scheduled) {
             this.radioScheduled.checked = true;
             this.inputScheduled.value = refreshSettings.scheduled;
