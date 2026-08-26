@@ -1,10 +1,9 @@
 import threading
-import time
 import os
 import logging
 import psutil
 import pytz
-from datetime import datetime, timezone
+from datetime import datetime
 from plugins.plugin_registry import get_plugin_instance
 from utils.image_utils import compute_image_hash
 from model import RefreshInfo, PlaylistManager
@@ -210,9 +209,9 @@ class RefreshTask:
 class RefreshAction:
     """Base class for a refresh action. Subclasses should override the methods below."""
     
-    def refresh(self, plugin, device_config, current_dt):
+    def execute(self, plugin, device_config, current_dt):
         """Perform a refresh operation and return the updated image."""
-        raise NotImplementedError("Subclasses must implement the refresh method.")
+        raise NotImplementedError("Subclasses must implement the execute method.")
     
     def get_refresh_info(self):
         """Return refresh metadata as a dictionary."""

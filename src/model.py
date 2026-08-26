@@ -67,9 +67,9 @@ class PlaylistManager:
     DEFAULT_PLAYLIST_START = "00:00"
     DEFAULT_PLAYLIST_END = "24:00"
 
-    def __init__(self, playlists=[], active_playlist=None):
+    def __init__(self, playlists=None, active_playlist=None):
         """Initialize PlaylistManager with a list of playlists."""
-        self.playlists = playlists
+        self.playlists = playlists if playlists is not None else []
         self.active_playlist = active_playlist
 
     def get_playlist_names(self):
@@ -204,15 +204,6 @@ class Playlist:
         self.plugins.append(PluginInstance.from_dict(plugin_data))
         return True
 
-    def update_plugin(self, plugin_id, instance_name, updated_data):
-        """Updates an existing plugin instance in the playlist."""
-        plugin = self.find_plugin(plugin_id, instance_name)
-        if plugin:
-            plugin.update(updated_data)
-            return True
-        logger.warning(f"Plugin '{plugin_id}' with name '{instance_name}' not found.")
-        return False
-
     def delete_plugin(self, plugin_id, name):
         """Remove a specific plugin instance from the playlist."""
         initial_count = len(self.plugins)
@@ -295,11 +286,6 @@ class PluginInstance:
         self.refresh = refresh
         self.latest_refresh_time = latest_refresh_time
 
-    def update(self, updated_data):
-        """Update attributes of the class with the dictionary values."""
-        for key, value in updated_data.items():
-            setattr(self, key, value)
-
     def should_refresh(self, current_time):
         """Checks whether the plugin should be refreshed based on its refresh settings and the current time."""
         latest_refresh_dt = self.get_latest_refresh_dt()
@@ -313,14 +299,6 @@ class PluginInstance:
                 return True
 
         # Check for scheduled refresh (HH:MM format)
-        if "scheduled" in self.refresh:
-            scheduled_time_str = self.refresh.get("scheduled")
-            latest_refresh_str = latest_refresh_dt.strftime("%H:%M")
-
-            # If the latest refresh is before the scheduled time today
-            if latest_refresh_str < scheduled_time_str:
-                return True
-        
         if "scheduled" in self.refresh:
             scheduled_time_str = self.refresh.get("scheduled")
             scheduled_time = datetime.strptime(scheduled_time_str, "%H:%M").time()
