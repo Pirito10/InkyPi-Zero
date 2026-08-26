@@ -204,15 +204,6 @@ class Playlist:
         self.plugins.append(PluginInstance.from_dict(plugin_data))
         return True
 
-    def update_plugin(self, plugin_id, instance_name, updated_data):
-        """Updates an existing plugin instance in the playlist."""
-        plugin = self.find_plugin(plugin_id, instance_name)
-        if plugin:
-            plugin.update(updated_data)
-            return True
-        logger.warning(f"Plugin '{plugin_id}' with name '{instance_name}' not found.")
-        return False
-
     def delete_plugin(self, plugin_id, name):
         """Remove a specific plugin instance from the playlist."""
         initial_count = len(self.plugins)
@@ -294,11 +285,6 @@ class PluginInstance:
         self.settings = settings
         self.refresh = refresh
         self.latest_refresh_time = latest_refresh_time
-
-    def update(self, updated_data):
-        """Update attributes of the class with the dictionary values."""
-        for key, value in updated_data.items():
-            setattr(self, key, value)
 
     def should_refresh(self, current_time):
         """Checks whether the plugin should be refreshed based on its refresh settings and the current time."""
