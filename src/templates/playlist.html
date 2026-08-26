@@ -106,7 +106,7 @@
                 alert('Se ha producido un error al procesar tu solicitud.');
             } finally {
                 // Hide loading indicator after the action is complete
-                loadingIndicator.style.display = 'none';
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
             }
         }
 
@@ -296,17 +296,15 @@
             // Add event listeners for refresh settings buttons
             document.querySelectorAll('.refresh-settings-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    const playlistName = this.dataset.playlist;
                     const pluginId = this.dataset.pluginId;
                     const instanceName = this.dataset.instance;
                     const refreshSettings = JSON.parse(this.dataset.refresh);
-                    openRefreshModal(playlistName, pluginId, instanceName, refreshSettings);
+                    openRefreshModal(pluginId, instanceName, refreshSettings);
                 });
             });
         });
 
         // Global variables to track the plugin being edited
-        let currentEditPlaylist = '';
         let currentEditPluginId = '';
         let currentEditInstance = '';
 
@@ -314,8 +312,7 @@
         const playlistRefreshManager = createRefreshSettingsManager('refreshSettingsModal', 'modal');
 
         // Function to open refresh settings modal from playlist view
-        function openRefreshModal(playlistName, pluginId, instanceName, refreshSettings) {
-            currentEditPlaylist = playlistName;
+        function openRefreshModal(pluginId, instanceName, refreshSettings) {
             currentEditPluginId = pluginId;
             currentEditInstance = instanceName;
 
@@ -429,7 +426,6 @@
                                 </a>
                                 <button class="icon-action-button refresh-settings-btn"
                                         title="Editar ajustes de refresco"
-                                        data-playlist="{{ playlist.name }}"
                                         data-plugin-id="{{ plugin_instance.plugin_id }}"
                                         data-instance="{{ plugin_instance.name }}"
                                         data-refresh='{{ plugin_instance.refresh | tojson }}'>
