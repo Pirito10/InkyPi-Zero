@@ -11,17 +11,10 @@ logging.config.fileConfig(os.path.join(os.path.dirname(__file__), 'config', 'log
 import warnings
 warnings.filterwarnings("ignore", message=".*Busy Wait: Held high.*")
 
-import os
 import random
-import time
-import sys
-import json
-import logging
-import threading
 import argparse
-from utils.app_utils import generate_startup_image
-from flask import Flask, request, send_from_directory
-from werkzeug.serving import is_running_from_reloader
+from utils.app_utils import generate_startup_image, get_ip_address
+from flask import Flask
 from config import Config
 from display.display_manager import DisplayManager
 from refresh_task import RefreshTask
@@ -102,14 +95,9 @@ if __name__ == '__main__':
 
         # Get local IP address for display (only in dev mode when running on non-Pi)
         if DEV_MODE:
-            import socket
             try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("8.8.8.8", 80))
-                local_ip = s.getsockname()[0]
-                s.close()
-                logger.info(f"Serving on http://{local_ip}:{PORT}")
-            except:
+                logger.info(f"Serving on http://{get_ip_address()}:{PORT}")
+            except Exception:
                 pass  # Ignore if we can't get the IP
 
         serve(app, host="0.0.0.0", port=PORT, threads=1)
