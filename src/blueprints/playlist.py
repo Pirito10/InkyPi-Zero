@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, render_template
-from utils.time_utils import calculate_seconds
+from utils.time_utils import calculate_seconds, parse_refresh_interval_seconds, MIN_REFRESH_INTERVAL_SECONDS
 import json
 from datetime import datetime, timedelta
 import os
@@ -39,11 +39,10 @@ def add_plugin():
 
         if refresh_type == "interval":
             unit, interval = refresh_settings.get('unit'), refresh_settings.get("interval")
-            if not unit or unit not in ["minute", "hour", "day"]:
-                return jsonify({"error": "Refresh interval unit is required"}), 400
-            if not interval:
-                return jsonify({"error": "Refresh interval is required"}), 400
-            refresh_interval_seconds = calculate_seconds(int(interval), unit)
+            try:
+                refresh_interval_seconds = parse_refresh_interval_seconds(interval, unit)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
             refresh_config = {"interval": refresh_interval_seconds}
         else:
             refresh_time = refresh_settings.get('refreshTime')
@@ -90,8 +89,8 @@ def _parse_cycle_interval(data):
         raise ValueError("El intervalo de rotación es obligatorio")
 
     cycle_interval_seconds = calculate_seconds(int(interval), unit)
-    if cycle_interval_seconds > 86400 or cycle_interval_seconds < 180:
-        raise ValueError("El intervalo de rotación debe estar entre 180 segundos y 24 horas")
+    if cycle_interval_seconds > 86400 or cycle_interval_seconds < MIN_REFRESH_INTERVAL_SECONDS:
+        raise ValueError(f"El intervalo de rotación debe estar entre {MIN_REFRESH_INTERVAL_SECONDS} segundos y 24 horas")
 
     return cycle_interval_seconds
 

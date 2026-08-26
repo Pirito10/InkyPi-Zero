@@ -174,16 +174,18 @@ def update_plugin_instance(instance_name):
         # Handle refresh settings if provided
         refresh_settings_json = form_data.pop("refresh_settings", None)
         if refresh_settings_json:
-            from utils.time_utils import calculate_seconds
+            from utils.time_utils import parse_refresh_interval_seconds
             refresh_settings = json.loads(refresh_settings_json)
             refresh_type = refresh_settings.get('refreshType')
 
             if refresh_type == "interval":
                 unit = refresh_settings.get('unit')
                 interval = refresh_settings.get('interval')
-                if unit and interval:
-                    refresh_interval_seconds = calculate_seconds(int(interval), unit)
-                    plugin_instance.refresh = {"interval": refresh_interval_seconds}
+                try:
+                    refresh_interval_seconds = parse_refresh_interval_seconds(interval, unit)
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
+                plugin_instance.refresh = {"interval": refresh_interval_seconds}
             elif refresh_type == "scheduled":
                 refresh_time = refresh_settings.get('refreshTime')
                 if refresh_time:

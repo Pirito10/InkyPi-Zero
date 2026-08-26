@@ -2,7 +2,7 @@ import logging
 import os
 from utils.app_utils import resolve_path, get_fonts
 from utils.image_utils import take_screenshot_html
-from utils.image_loader import AdaptiveImageLoader
+from utils.image_loader import ImageLoader
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 from PIL import Image, ImageDraw
@@ -41,7 +41,7 @@ class BasePlugin:
         self.config = config
 
         # Initialize adaptive image loader for device-aware image processing
-        self.image_loader = AdaptiveImageLoader()
+        self.image_loader = ImageLoader()
 
         self.render_dir = self.get_plugin_dir("render")
         if os.path.exists(self.render_dir):

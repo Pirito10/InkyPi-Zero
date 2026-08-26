@@ -12,10 +12,6 @@
 
 - [ ] **Cada actualización de pantalla tarda ~2-3 minutos en la Pi real.** El motivo: el propio `getbuffer_4Gray`/`display_4Gray` de Waveshare es Python puro, píxel a píxel, sobre una CPU de ~700MHz. Sin decidir si merece la pena optimizarlo (por ejemplo con numpy) o si se acepta tal cual para un regalo que se actualiza pocas veces al día.
 
-## Ajustes a código compartido (aplazados a su propia pasada)
-
-- [ ] **`get_font()` (en `utils/app_utils.py`) no cachea las fuentes** — cada llamada vuelve a leer y parsear el `.ttf` del disco. Es una función compartida por todos los plugins (`countdown`, `calendar`, `weather`, la imagen de arranque...), así que un `@lru_cache` ahí beneficiaría a todos a la vez. Fácil y de bajo riesgo, pero se deja para una pasada dedicada a cosas compartidas, no mezclado con el trabajo de un plugin concreto.
-
 ## Aplazado, no urgente
 
 - [ ] **Pase de interfaz móvil.** Nunca se ha hecho. Ajustes, Playlists y el dashboard principal ya tienen su diseño definitivo en escritorio — tocaría revisar los tres en móvil.
