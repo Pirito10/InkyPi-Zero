@@ -29,8 +29,6 @@ def _delete_plugin_instance_images(device_config, plugin_instance_obj):
     except Exception as e:
         logger.warning(f"Error during plugin cleanup for {plugin_instance_obj.plugin_id}: {e}")
 
-# Removed module-level PLUGINS_DIR - will resolve dynamically in route handlers
-
 @plugin_bp.route('/plugin/<plugin_id>')
 def plugin_page(plugin_id):
     device_config = current_app.config['DEVICE_CONFIG']
