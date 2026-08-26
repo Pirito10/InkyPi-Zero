@@ -112,30 +112,6 @@
     height: 17px;
 }
 
-/* Custom select arrow, matching the one used on the Settings page */
-.select-wrapper {
-    position: relative;
-    display: inline-flex;
-}
-
-.select-wrapper select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding-right: 2.2rem;
-}
-
-.select-chevron {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    color: var(--text-secondary);
-    pointer-events: none;
-}
-
 .header-button-icon {
     display: inline-flex;
     align-items: center;

@@ -38,6 +38,7 @@
         {% if plugin_instance %}
         editRefreshManager = createRefreshSettingsManager('refreshSettingsModal', 'edit');
         {% endif %}
+        const addRefreshManager = createRefreshSettingsManager('scheduleModal', 'add');
 
         async function saveRefreshSettings() {
             if (!editRefreshManager) return;
@@ -84,12 +85,20 @@
             });
 
             if (action == "add_to_playlist"){
-                url = '{{ url_for("playlist.add_plugin") }}';
-                const scheduleFormData = new FormData(scheduleForm);
-                const scheduleData = {};
-                for (const [key, value] of scheduleFormData.entries()) {
-                    scheduleData[key] = value;
+                const refreshData = addRefreshManager.getFormData();
+                const validation = addRefreshManager.validate(refreshData);
+                if (!validation.valid) {
+                    showResponseModal('failure', `Error! ${validation.error}`);
+                    loadingIndicator.style.display = 'none';
+                    return;
                 }
+
+                url = '{{ url_for("playlist.add_plugin") }}';
+                const scheduleData = {
+                    playlist: document.getElementById('playlist').value,
+                    instance_name: document.getElementById('instance').value,
+                    ...refreshData
+                };
                 formData.append("refresh_settings", JSON.stringify(scheduleData));
                 clearFormOnSubmit = true
             } else if (action == "update_instance") {

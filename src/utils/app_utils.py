@@ -9,13 +9,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 logger = logging.getLogger(__name__)
 
 FONT_FAMILIES = {
-    "Dogica": [{
-        "font-weight": "normal",
-        "file": "dogicapixel.ttf"
-    },{
-        "font-weight": "bold",
-        "file": "dogicapixelbold.ttf"
-    }],
     "Jost": [{
         "font-weight": "normal",
         "file": "Jost.ttf"

@@ -45,14 +45,16 @@
     }
 
     /**
-     * Update the toggle button hover text based on current theme
+     * Update the toggle button's tooltip/label to reflect the theme it would
+     * switch to next
      * @param {string} theme - The current theme
      */
     function updateToggleButtonText(theme) {
         const toggleButton = document.querySelector('.dark-mode-toggle');
         if (toggleButton) {
             const hoverText = theme === DARK_THEME ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
-            toggleButton.setAttribute('data-hover-text', hoverText);
+            toggleButton.setAttribute('title', hoverText);
+            toggleButton.setAttribute('aria-label', hoverText);
         }
     }
 
@@ -98,7 +100,4 @@
     } else {
         initialize();
     }
-
-    // Expose toggle function globally for manual calls
-    window.toggleDarkMode = toggleTheme;
 })();

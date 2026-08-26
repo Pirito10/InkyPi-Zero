@@ -215,31 +215,6 @@
     box-shadow: 0 0 3px var(--input-focus);
 }
 
-/* Custom select arrow, replacing the native one so it never crowds the border
-   and matches the chevron used elsewhere on this page */
-.select-wrapper {
-    position: relative;
-    display: inline-flex;
-}
-
-.select-wrapper select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding-right: 2.2rem;
-}
-
-.select-chevron {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    color: var(--text-secondary);
-    pointer-events: none;
-}
-
 .header-actions {
     display: flex;
     gap: 8px;
