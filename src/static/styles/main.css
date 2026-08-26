@@ -210,6 +210,16 @@ body {
     transition: filter 0.3s ease;
 }
 
+/* Inline SVG variant of .app-icon, for pages whose title icon isn't a
+   per-plugin image (plugin.html's .app-icon serves real plugin icon.png
+   files, so it has to stay filter/object-fit based for that). */
+.app-title-icon {
+    width: 30px;
+    height: 30px;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
 /* App title styling */
 .app-title {
     font-size: 1.5rem;
