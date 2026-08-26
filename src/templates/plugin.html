@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ plugin.display_name }} Settings</title>
+    <title>Ajustes de {{ plugin.display_name }}</title>
     <script>
         (function() {
             const theme = localStorage.getItem('inkypi-theme') ||
@@ -134,7 +134,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred while processing your request.');
+                alert('Se ha producido un error al procesar tu solicitud.');
             } finally {
                 // Hide loading indicator after the action is complete
                 loadingIndicator.style.display = 'none';
@@ -301,18 +301,18 @@
         <!-- Back Button -->
         <button onclick="history.back()" class="back-button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            Back
+            Volver
         </button>
 
         <!-- Plugin Title and Icon -->
         <div class="app-header">
             <div class="header-content">
                 <div class="title-container">
-                    <img src="{{ url_for('plugin.image', plugin_id=plugin.id, filename='icon.png') }}" alt="{{ plugin.display_name }} icon" class="app-icon">
+                    <img src="{{ url_for('plugin.image', plugin_id=plugin.id, filename='icon.png') }}" alt="Icono de {{ plugin.display_name }}" class="app-icon">
                     <h1 class="app-title">{{ plugin.display_name }}</h1>
                 </div>
                 {% if plugin_instance %}
-                    <button class="header-button" onclick="openModal('refreshSettingsModal')">Refresh Settings</button>
+                    <button class="header-button" onclick="openModal('refreshSettingsModal')">Ajustes de refresco</button>
                 {% endif %}
             </div>
             <div id="loadingIndicator" class="loading-indicator"></div>
@@ -328,13 +328,13 @@
                 {% if style_settings %}
                 <div class="collapsible">
                     <button type="button" class="collapsible-header" onclick="toggleCollapsible(this)">
-                        Style <span class="collapsible-icon">▼</span>
+                        Estilo <span class="collapsible-icon">▼</span>
                     </button>
                     <div class="settings-container collapsible-content">
                         <div class="form-group">
 
                             <div class="form-group nowrap">
-                                <label for="selected-frame" class="form-label">Frame:</label>
+                                <label for="selected-frame" class="form-label">Marco:</label>
                                 <div id="frame-selection" class="image-grid">
                                     {% for frame in frame_styles %}
                                     <div
@@ -349,25 +349,25 @@
                                     </div>
                                     {% endfor %}
                                 </div>
-                                <input type="hidden" id="selected-frame" name="selectedFrame" value="{{ frame_styles[0].Name }}" />
+                                <input type="hidden" id="selected-frame" name="selectedFrame" value="{{ frame_styles[0].name }}" />
                             </div>
 
                             <div class="form-group">
-                                <label for="margin" class="form-label">Margins:</label>
+                                <label class="form-label">Márgenes:</label>
                                 <div class="form-group nowrap">
-                                    <label for="topMargin" class="form-label">Top</label>
+                                    <label for="topMargin" class="form-label">Arriba</label>
                                     <input type="number" class="form-input" id="topMargin" name="topMargin" min="0" max="100" step="5"><span>px</span>
                                 </div>
                                 <div class="form-group nowrap">
-                                    <label for="bottomMargin" class="form-label">Bottom</label>
+                                    <label for="bottomMargin" class="form-label">Abajo</label>
                                     <input type="number" class="form-input" id="bottomMargin" name="bottomMargin" min="0" max="100" step="5"><span>px</span>
                                 </div>
                                 <div class="form-group nowrap">
-                                    <label for="leftMargin" class="form-label">Left</label>
+                                    <label for="leftMargin" class="form-label">Izquierda</label>
                                     <input type="number" class="form-input" id="leftMargin" name="leftMargin" min="0" max="100" step="5"><span>px</span>
                                 </div>
                                 <div class="form-group nowrap">
-                                    <label for="rightMargin" class="form-label">Right</label>
+                                    <label for="rightMargin" class="form-label">Derecha</label>
                                     <input type="number" class="form-input" id="rightMargin" name="rightMargin" min="0" max="100" step="5"><span>px</span>
                                 </div>
                             </div>
@@ -375,7 +375,7 @@
 
                         <!-- Background Color Option -->
                         <div class="form-group">
-                            <label class="form-label">Background:</label>
+                            <label class="form-label">Fondo:</label>
                             <div class="form-group nowrap">
                                 <label>
                                     <input type="radio" name="backgroundOption" value="color" checked>
@@ -386,9 +386,9 @@
                             <div class="form-group nowrap">
                                 <label>
                                     <input type="radio" name="backgroundOption" value="image">
-                                    Image
+                                    Imagen
                                 </label>
-                                <label for="imageUpload" class="form-input file-upload-label" id="uploadButtonLabel">Upload Image</label>
+                                <label for="imageUpload" class="form-input file-upload-label" id="uploadButtonLabel">Subir imagen</label>
                                 <input type="file" clear-on-submit id="imageUpload" name="backgroundImageFile" accept="image/*" class="file-upload-input" onchange="showFileName()">
                                 <div id="fileName" class="file-name" style="display: none;">
                                     <span id="fileNameText"></span>
@@ -402,7 +402,7 @@
 
                         <!-- Text Color Picker -->
                         <div class="form-group">
-                            <label for="textColor" class="form-label">Text Color:</label>
+                            <label for="textColor" class="form-label">Color del texto:</label>
                             <input type="color" id="textColor" name="textColor" class="color-picker" value="#000000">
                         </div>
                     </div>
@@ -415,11 +415,11 @@
 
             <div class="buttons-container">
                 {% if plugin_instance %}
-                    <button type="button" onclick="handleAction('update_instance')" class="action-button">Save</button>
-                    <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Save As...</button>
+                    <button type="button" onclick="handleAction('update_instance')" class="action-button">Guardar</button>
+                    <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Guardar como...</button>
                 {% else %}
-                    <button type="button" onclick="handleAction()" class="action-button left">Update Now</button>
-                    <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Add to Playlist</button>
+                    <button type="button" onclick="handleAction()" class="action-button left">Actualizar ahora</button>
+                    <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Añadir a lista</button>
                 {% endif %}
             </div>
         </form>
@@ -433,14 +433,14 @@
     <div id="refreshSettingsModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeModal('refreshSettingsModal')">×</span>
-            <h2>Refresh Settings</h2>
+            <h2>Ajustes de refresco</h2>
             <div class="separator"></div>
             <form id="refreshSettingsForm" class="settings-form">
                 {% set prefix = "edit" %}
                 {% include 'refresh_settings_form.html' %}
             </form>
             <div class="buttons-container">
-                <button type="button" onclick="saveRefreshSettings()" class="action-button">Save</button>
+                <button type="button" onclick="saveRefreshSettings()" class="action-button">Guardar</button>
             </div>
         </div>
     </div>
@@ -450,11 +450,11 @@
     <div id="scheduleModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeModal('scheduleModal')">×</span>
-            <h2>Add to Playlist</h2>
+            <h2>Añadir a lista</h2>
             <div class="separator"></div>
             <form id="scheduleForm" class="settings-form">
                 <div class="form-group">
-                    <label for="playlist" class="form-label">Playlist:</label>
+                    <label for="playlist" class="form-label">Lista:</label>
                     <select id="playlist" name="playlist" class="form-input">
                         {% for playlist_name in playlists %}
                         <option value="{{playlist_name}}">{{playlist_name}}</option>
@@ -462,8 +462,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="instance" class="form-label">Instance Name:</label>
-                    <input type="text" id="instance" name="instance_name" placeholder="Type something..." required class="form-input">
+                    <label for="instance" class="form-label">Nombre de la instancia:</label>
+                    <input type="text" id="instance" name="instance_name" placeholder="Escribe algo..." required class="form-input">
                 </div>
 
                 {% set prefix = "add" %}
@@ -471,7 +471,7 @@
 
             </form>
             <div class="buttons-container">
-                <button type="button" onclick="handleAction('add_to_playlist')" class="action-button">Save</button>
+                <button type="button" onclick="handleAction('add_to_playlist')" class="action-button">Guardar</button>
             </div>
         </div>
     </div>

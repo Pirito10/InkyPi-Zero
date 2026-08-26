@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 photo_library_bp = Blueprint("photo_library", __name__)
 
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'avif', 'jpg', 'jpeg', 'gif', 'webp', 'heif', 'heic'}
+ALLOWED_EXTENSIONS = {'png', 'avif', 'jpg', 'jpeg', 'gif', 'webp', 'heif', 'heic'}
 
 
 def get_library_dir():
