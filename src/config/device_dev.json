@@ -5,7 +5,8 @@
         800,
         480
     ],
-    "orientation": "horizontal",
+    "orientation": "vertical",
+    "color_mode": "grayscale",
     "timezone": "Europe/Madrid",
     "time_format": "24h",
     "plugin_order": [
@@ -36,5 +37,13 @@
         "image_hash": "c519b8fabb2053e80c26de9d35c9ea1f2cf0cad0ab0d69047ab77246b8a59a43",
         "refresh_type": "Manual Update",
         "plugin_id": "todo_list"
+    },
+    "inverted_image": null,
+    "log_system_stats": null,
+    "image_settings": {
+        "saturation": 1.0,
+        "brightness": 1.0,
+        "sharpness": 1.0,
+        "contrast": 1.0
     }
 }

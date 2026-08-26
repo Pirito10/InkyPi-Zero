@@ -42,10 +42,14 @@ def save_settings():
         time_format = form_data.get("timeFormat")
         if not time_format or time_format not in ["12h", "24h"]:
             return jsonify({"error": "El formato de hora es obligatorio"}), 400
+        color_mode = form_data.get("colorMode", "grayscale")
+        if color_mode not in ["grayscale", "bw"]:
+            return jsonify({"error": "Modo de color no válido"}), 400
 
         settings = {
             "orientation": form_data.get("orientation"),
             "inverted_image": form_data.get("invertImage"),
+            "color_mode": color_mode,
             "log_system_stats": form_data.get("logSystemStats"),
             "timezone": form_data.get("timezoneName"),
             "time_format": form_data.get("timeFormat"),
