@@ -183,34 +183,6 @@ body {
     transition: color 0.3s ease;
 }
 
-/* Button grid container styling */
-.button-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 15px;
-    overflow-y: auto;
-    padding: 10px 5px;
-}
-
-/* Individual button styling */
-.icon-button {
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 70px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px var(--shadow-light);
-    background-color: var(--button-bg);
-}
-
-.icon-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 10px var(--shadow-medium);
-}
-
 /* Icon image styling */
 .icon-image {
     width: 32px;
@@ -423,14 +395,6 @@ small {
     font-size: 0.9rem;
     padding: 10px;
     width: auto;
-}
-
-/* Form styling for inline layout */
-.form-inline {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
 }
 
 /* Label styling */
@@ -830,20 +794,6 @@ small {
     transition: color 0.3s ease;
 }
 
-/* Edit & Delete Buttons */
-.edit-button,
-.delete-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-
-.edit-button img,
-.delete-button img {
-    filter: var(--image-filter);
-    transition: filter 0.3s ease;
-}
-
 /* Playlist List */
 .playlist-list {
     display: flex;
@@ -882,13 +832,6 @@ small {
     font-weight: 600;
     color: var(--text-primary);
     transition: color 0.3s ease;
-}
-
-.action-icon {
-    width: 20px;
-    height: 20px;
-    filter: var(--image-filter);
-    transition: filter 0.3s ease;
 }
 
 .header-content {
@@ -1033,10 +976,6 @@ small {
     color: white;
     border-color: #007BFF;
     z-index: 2;
-}
-
-.font-weight-normal {
-    font-weight: normal;
 }
 
 /* Plugin Grid/List View Styles */
