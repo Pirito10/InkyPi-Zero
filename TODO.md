@@ -8,7 +8,7 @@
   - Aplazado a propósito, no se ha intentado ningún arreglo (parche por JavaScript tras el renderizado, o volver esas dos vistas concretas a PIL manteniendo el resto en FullCalendar).
 
 - [ ] **El "negro" del modo 4 grises se ve más claro que el negro 1-bit puro.** Visto en la imagen de arranque (el texto salía en gris claro). Reproducido el pipeline completo en software (dithering + empaquetado real del driver + decodificación) y sale negro sólido correctamente — así que el bug, si lo hay, no está en nuestro código Python. Hipótesis: limitación física del propio modo de 4 grises del panel (la forma de onda para 4 niveles no puede llevar el contraste tan al extremo como una de 2 niveles). **Sin confirmar del todo** — quedó pendiente la prueba directa de comparar el mismo negro sólido en modo 4-grises vs modo 1-bit en el mismo panel.
-  - Añadir una opción en el dashboard (Ajustes → Pantalla) para elegir entre modo B&N puro o escala de grises, para quien prefiera el negro más profundo del 1-bit sobre tener sombras de gris.
+  - Ya se puede elegir en el dashboard (Ajustes → Pantalla → Modo de color) entre blanco y negro puro o escala de grises, para quien prefiera el negro más profundo del 1-bit sobre tener sombras de gris. Pendiente de probar en la Pi real.
 
 - [ ] **Cada actualización de pantalla tarda ~2-3 minutos en la Pi real.** El motivo: el propio `getbuffer_4Gray`/`display_4Gray` de Waveshare es Python puro, píxel a píxel, sobre una CPU de ~700MHz. Sin decidir si merece la pena optimizarlo (por ejemplo con numpy) o si se acepta tal cual para un regalo que se actualiza pocas veces al día.
 
