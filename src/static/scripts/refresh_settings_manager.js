@@ -167,7 +167,10 @@ class RefreshSettingsManager {
      * @returns {{refreshType: string, interval?: string, unit?: string, refreshTime?: string}}
      */
     getFormData() {
-        const refreshType = document.querySelector(`input[name="refreshType"]:checked`)?.value;
+        // Scoped to this.modal: the "refreshType" radio name isn't prefixed
+        // per-instance, so a document-wide query could pick up the checked
+        // radio from a different RefreshSettingsManager's form on the same page.
+        const refreshType = this.modal.querySelector(`input[name="refreshType"]:checked`)?.value;
         const data = { refreshType };
 
         if (refreshType === 'interval') {
