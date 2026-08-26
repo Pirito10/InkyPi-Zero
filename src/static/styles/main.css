@@ -1140,6 +1140,12 @@ small {
     border-style: dashed;
 }
 
+/* Without this, dragover/dragleave fire on every child the pointer crosses,
+   making the drag-over highlight flicker instead of tracking the whole item. */
+.plugins-container.sorting .plugin-item * {
+    pointer-events: none;
+}
+
 .plugins-container.sorting .plugin-item:hover {
     border-color: #4CAF50;
     background: rgba(76, 175, 80, 0.05);
