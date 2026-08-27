@@ -42,6 +42,34 @@ html[data-theme="dark"] .settings-button.dark-mode-toggle .icon-moon {
     box-shadow: 0 4px 12px var(--shadow-medium);
 }
 
+/* Shown instead of the image before the first refresh has ever completed */
+.image-placeholder {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 300px;
+    height: 180px;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 0 24px;
+}
+
+.image-placeholder svg {
+    width: 40px;
+    height: 40px;
+    opacity: 0.5;
+}
+
+.image-container.no-image img {
+    display: none;
+}
+
+.image-container.no-image .image-placeholder {
+    display: flex;
+}
+
 /* Plugin cards */
 .plugins-container .plugin-item {
     border-radius: 12px;

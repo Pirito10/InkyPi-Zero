@@ -18,6 +18,11 @@
         let currentObjectUrl = null;
         const refreshIntervalMs = 3 * 1000;
 
+        function showImagePlaceholder(show) {
+            const container = document.querySelector('.image-container');
+            if (container) container.classList.toggle('no-image', show);
+        }
+
         async function refreshImage() {
             const img = document.querySelector('.image-container img');
             if (!img) return;
@@ -36,6 +41,8 @@
 
                 if (!response.ok) {
                     console.error('Failed to fetch image:', response.status);
+                    // 404 before the first refresh ever completes is expected, not an error worth alarming over.
+                    showImagePlaceholder(true);
                     return;
                 }
 
@@ -49,6 +56,7 @@
                 img.src = objectUrl;
                 currentObjectUrl = objectUrl;
                 lastModified = response.headers.get('Last-Modified');
+                showImagePlaceholder(false);
             } catch (error) {
                 console.error('Error refreshing image:', error);
             }
@@ -109,7 +117,11 @@
 
         <!-- Display the current image -->
         <div class="image-container">
-            <img src="{{ url_for('static', filename='images/current_image.png') }}" alt="Imagen actual">
+            <img src="{{ url_for('static', filename='images/current_image.png') }}" alt="Imagen actual" onerror="showImagePlaceholder(true)">
+            <div class="image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p>Todavía no se ha generado ninguna imagen</p>
+            </div>
         </div>
 
         <!-- Separator -->
