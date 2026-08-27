@@ -690,11 +690,14 @@ small {
 }
 
 @keyframes fadeIn {
+    /* Scale only, no opacity - animating opacity here meant the modal card
+       spent its first ~300ms partially see-through, easy to catch mid-fade
+       in a screenshot (or just a fast click) and mistake for a rendering bug. */
     from {
-        opacity: 0;
+        transform: scale(0.95);
     }
     to {
-        opacity: 1;
+        transform: scale(1);
     }
 }
 
