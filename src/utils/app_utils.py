@@ -108,7 +108,7 @@ def _draw_centered_message(dimensions, title, subtitle_lines, title_font_size_ra
 
 def generate_gift_ready_image(dimensions=(800, 480)):
     """First screen: kept on the display while unplugged, before the gift is wrapped up."""
-    return _draw_centered_message(dimensions, "Feliz aniversario", ["Enchúfame y espera instrucciones"])
+    return _draw_centered_message(dimensions, "¡Feliz aniversario!", ["Enchúfame y espera instrucciones"])
 
 def generate_startup_image(dimensions=(800, 480)):
     """Second screen: shown automatically on the recipient's first real boot (see the
