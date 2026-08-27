@@ -23,8 +23,12 @@
         }
 
         .library-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            /* flex + wrap centers the actual tiles; a grid with auto-fill
+               would center its column tracks instead, including whichever
+               ones end up empty because there aren't enough photos to fill
+               them - the tiles themselves stay left-packed either way. */
+            display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             gap: 12px;
             margin-top: 15px;
@@ -32,6 +36,7 @@
 
         .library-photo {
             position: relative;
+            flex: 0 0 140px;
             border-radius: 8px;
             overflow: hidden;
             aspect-ratio: 1 / 1;
