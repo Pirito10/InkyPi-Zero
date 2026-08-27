@@ -33,6 +33,13 @@ html[data-theme="dark"] .settings-button.dark-mode-toggle .icon-moon {
 
 .image-container img {
     border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.image-container img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px var(--shadow-medium);
 }
 
 /* Plugin cards */
