@@ -413,6 +413,17 @@ small {
     background-color: var(--accent-warn-hover);
 }
 
+/* Neutral, so it recedes next to a .warn confirm button instead of competing with it */
+.action-button.secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+}
+
+.action-button.secondary:hover {
+    background-color: var(--button-hover);
+}
+
 .action-button:hover {
     background-color: var(--accent-hover);
 }
