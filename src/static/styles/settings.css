@@ -230,3 +230,32 @@
     width: 15px;
     height: 15px;
 }
+
+/* Fixed semaphore colors (not theme-dependent, unlike --accent-*) so these
+   destructive/warning actions stay unambiguous in both light and dark. */
+.header-button.info-blue {
+    background-color: #1E88E5;
+    color: #fff;
+}
+
+.header-button.info-blue:hover {
+    background-color: #1976D2;
+}
+
+.header-button.warn-yellow {
+    background-color: #FFD600;
+    color: #333;
+}
+
+.header-button.warn-yellow:hover {
+    background-color: #FBC02D;
+}
+
+.header-button.danger-red {
+    background-color: #E53935;
+    color: #fff;
+}
+
+.header-button.danger-red:hover {
+    background-color: #D32F2F;
+}
