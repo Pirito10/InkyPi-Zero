@@ -216,6 +216,11 @@
     padding-right: 2.2rem;
 }
 
+.settings-field input[type="text"]:hover,
+.settings-field select:hover {
+    border-color: var(--text-secondary);
+}
+
 .settings-field input[type="text"]:focus,
 .settings-field select:focus {
     outline: none;

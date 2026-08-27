@@ -445,6 +445,10 @@ small {
     transition: all 0.3s ease;
 }
 
+.form-input:hover {
+    border-color: var(--text-secondary);
+}
+
 .form-input:focus {
     outline: none;
     border-color: var(--accent-primary);
