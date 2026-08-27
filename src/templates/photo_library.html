@@ -194,6 +194,20 @@
     <!-- Modal -->
     {% include 'response_modal.html' %}
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeDeleteConfirm()">&times;</span>
+            <h2>Borrar foto</h2>
+            <div class="separator"></div>
+            <p id="deleteConfirmText"></p>
+            <div class="buttons-container">
+                <button type="button" class="action-button" onclick="closeDeleteConfirm()">Cancelar</button>
+                <button type="button" class="action-button warn" onclick="confirmDeletePhoto()">Borrar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function addPhotoToGrid(photo) {
             const emptyState = document.getElementById('empty-state');
@@ -295,8 +309,23 @@
             }
         }
 
-        async function deletePhoto(filename) {
-            if (!confirm(`¿Borrar "${filename}" de la biblioteca?`)) return;
+        let pendingDeleteFilename = null;
+
+        function deletePhoto(filename) {
+            pendingDeleteFilename = filename;
+            document.getElementById('deleteConfirmText').textContent = `¿Borrar "${filename}" de la biblioteca?`;
+            document.getElementById('deleteConfirmModal').style.display = 'block';
+        }
+
+        function closeDeleteConfirm() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            pendingDeleteFilename = null;
+        }
+
+        async function confirmDeletePhoto() {
+            const filename = pendingDeleteFilename;
+            closeDeleteConfirm();
+            if (!filename) return;
 
             try {
                 const response = await fetch('{{ url_for("photo_library.photo_library_delete") }}', {
@@ -317,6 +346,14 @@
                 showResponseModal('failure', 'Error al borrar la foto');
             }
         }
+
+        // Close modal if the user clicks outside the modal content
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('deleteConfirmModal');
+            if (event.target === modal) {
+                closeDeleteConfirm();
+            }
+        });
     </script>
 </body>
 </html>
