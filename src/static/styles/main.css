@@ -503,6 +503,48 @@ input[type="radio"]:checked::after {
     transform: translate(-50%, -50%);
 }
 
+/* Custom checkboxes, same rationale as the radio buttons above - several
+   plugin settings pages (calendar, weather, countdown...) use plain
+   checkboxes that otherwise render in the browser's native blue. This is
+   overridden for toggle-style checkboxes by the more specific
+   .toggle-checkbox / ".toggle-switch input" rules further down, which are
+   declared after this block and so still win. */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    background-color: var(--input-bg);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--text-secondary);
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
 /* Custom select arrow. Shared here (rather than in a page-specific stylesheet)
    because refresh_settings_form.html, which uses these classes, is included
    from plugin.html too, and plugin.html only loads main.css. */
@@ -598,7 +640,8 @@ input[type="radio"]:checked::after {
 }
 
 .file-upload-label:active {
-    background-color: #d1d5db;
+    background-color: var(--button-hover);
+    filter: brightness(0.92);
 }
 
 /* Hide the default file input */
@@ -639,7 +682,7 @@ input[type="radio"]:checked::after {
 }
 
 .image-option.selected {
-    border-color: #007bff;
+    border-color: var(--accent-primary);
 }
 
 /* Settings button styling */
@@ -1078,9 +1121,9 @@ input[type="radio"]:checked::after {
 }
 
 .button-group button.active {
-    background-color: #007BFF;
+    background-color: var(--accent-primary);
     color: white;
-    border-color: #007BFF;
+    border-color: var(--accent-primary);
     z-index: 2;
 }
 
@@ -1116,9 +1159,9 @@ input[type="radio"]:checked::after {
 }
 
 .sort-toggle.active {
-    background: #4CAF50;
+    background: var(--accent-primary);
     color: #fff;
-    border-color: #4CAF50;
+    border-color: var(--accent-primary);
 }
 
 /* Grid View (default) */
@@ -1219,8 +1262,8 @@ input[type="radio"]:checked::after {
 }
 
 .plugins-container.sorting .plugin-item:hover {
-    border-color: #4CAF50;
-    background: rgba(76, 175, 80, 0.05);
+    border-color: var(--accent-primary);
+    background: rgba(26, 188, 156, 0.08);
 }
 
 .plugins-container.sorting .plugin-item.dragging {
@@ -1229,9 +1272,11 @@ input[type="radio"]:checked::after {
 }
 
 .plugins-container.sorting .plugin-item.drag-over {
-    border-color: #2196F3;
+    /* Darker accent-hover (vs. the plain accent-primary hover above) plus the
+       solid border keeps "drag target" visually distinct from a plain hover. */
+    border-color: var(--accent-hover);
     border-style: solid;
-    background: rgba(33, 150, 243, 0.1);
+    background: rgba(26, 188, 156, 0.18);
 }
 
 .sort-hint {

@@ -84,9 +84,3 @@ html[data-theme="dark"] .settings-button.dark-mode-toggle .icon-moon {
 .sort-toggle {
     border-radius: 8px;
 }
-
-.sort-toggle.active {
-    background: var(--accent-primary);
-    color: #fff;
-    border-color: var(--accent-primary);
-}
