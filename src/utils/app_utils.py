@@ -80,19 +80,29 @@ def _draw_centered_message(dimensions, title, subtitle_lines, title_font_size_ra
     image = Image.new("RGBA", dimensions, bg_color)
     image_draw = ImageDraw.Draw(image)
 
-    title_font_size = width * title_font_size_ratio
-    image_draw.text((width/2, height/2), title, anchor="mm", fill=text_color,
-                     font=get_font("Jost", title_font_size, "bold"))
-
+    title_font = get_font("Jost", width * title_font_size_ratio, "bold")
     subtitle_font_size = width * 0.032
     subtitle_font = get_font("Jost", subtitle_font_size)
-    y_text = height * 3 / 4
+
+    title_bbox = image_draw.textbbox((0, 0), title, font=title_font)
+    title_height = title_bbox[3] - title_bbox[1]
     line_height = subtitle_font_size * 1.35
-    # Center the block of N lines around y_text instead of stacking downward from it
-    start_y = y_text - (len(subtitle_lines) - 1) * line_height / 2
+    subtitle_block_height = line_height * len(subtitle_lines)
+    gap = height * 0.06
+
+    # Center title + gap + subtitle block as one unit, instead of anchoring
+    # the title to height/2 and the subtitle to height*3/4 independently -
+    # that left the whole block visually shifted toward the bottom.
+    total_height = title_height + gap + subtitle_block_height
+    top = (height - total_height) / 2
+
+    title_center_y = top + title_height / 2
+    image_draw.text((width/2, title_center_y), title, anchor="mm", fill=text_color, font=title_font)
+
+    subtitle_top = top + title_height + gap
     for i, line in enumerate(subtitle_lines):
-        image_draw.text((width/2, start_y + i * line_height), line, anchor="mm",
-                         fill=text_color, font=subtitle_font)
+        line_center_y = subtitle_top + line_height * i + line_height / 2
+        image_draw.text((width/2, line_center_y), line, anchor="mm", fill=text_color, font=subtitle_font)
 
     return image
 
@@ -104,10 +114,8 @@ def generate_startup_image(dimensions=(800, 480)):
     """Second screen: shown automatically on the recipient's first real boot (see the
     'startup' config flag in inkypi.py) - tells them how to reach the web UI."""
     hostname = socket.gethostname()
-    ip = get_ip_address()
     return _draw_centered_message(dimensions, "¡Ya casi está!",
-                                   [f"Entra a http://{hostname}.local", "desde el navegador de tu ordenador y configúrame",
-                                    f"(o http://{ip} si lo anterior no funciona)"],
+                                   [f"Entra a http://{hostname}.local", "desde el navegador de tu ordenador y configúrame"],
                                    title_font_size_ratio=0.09)
 
 def parse_form(request_form):
