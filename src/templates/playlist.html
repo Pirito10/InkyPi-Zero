@@ -356,7 +356,7 @@
         <div class="app-header">
             <div class="header-content">
                 <div class="title-container">
-                    <svg class="app-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <svg class="app-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="5" x2="21" y2="5"/><line x1="3" y1="11" x2="10" y2="11"/><line x1="3" y1="15" x2="10" y2="15"/><line x1="3" y1="19" x2="10" y2="19"/><polygon points="13 9 13 21 22 15"/></svg>
                     <h1 class="app-title">Listas de reproducción</h1>
                 </div>
                 <button class="header-button header-button-icon" onclick="openCreateModal()">
@@ -373,7 +373,7 @@
             <div class="playlist-item {% if playlist.name == playlist_config.active_playlist %}active{% endif %}">
                     <div class="playlist-header">
                         <span class="playlist-title-group">
-                            <svg class="playlist-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            <svg class="playlist-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="5" x2="21" y2="5"/><line x1="3" y1="11" x2="10" y2="11"/><line x1="3" y1="15" x2="10" y2="15"/><line x1="3" y1="19" x2="10" y2="19"/><polygon points="13 9 13 21 22 15"/></svg>
                             <span class="playlist-title">{{ playlist.name }}</span>
                             <span class="playlist-time-range">{{ playlist.start_time }} – {{ playlist.end_time }}</span>
                         </span>
