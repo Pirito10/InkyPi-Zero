@@ -599,6 +599,12 @@ input[type="checkbox"]:checked::after {
     transition: 0.3s;
 }
 
+/* The checkbox itself is hidden at 0x0, so the label is what the user
+   actually hovers - matches .toggle-switch:hover's ring in settings.css. */
+.toggle-label:hover {
+    box-shadow: 0 0 0 3px var(--shadow-light);
+}
+
 /* Toggle Knob */
 .toggle-label::before {
     position: absolute;
