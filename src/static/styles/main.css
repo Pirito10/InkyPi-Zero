@@ -103,13 +103,17 @@ body {
 
 /* Header styling */
 .header {
-    display: flex;
+    display: grid;
+    /* Equal 1fr side columns keep the title centered on the header's own
+       width regardless of the left/right icon groups' different sizes -
+       flex:1 on the title alone centers it in the leftover space instead,
+       which isn't the same thing when the two icon groups aren't the same width. */
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     margin-bottom: 20px;
 }
 
 .header h1 {
-    flex: 1;
     text-align: center;
     font-size: 2rem;
     font-weight: 700;
@@ -121,9 +125,14 @@ body {
     transition: color 0.3s ease;
 }
 
+.header > .dark-mode-toggle {
+    justify-self: start;
+}
+
 .header-nav {
     display: flex;
     align-items: center;
+    justify-self: end;
 }
 
 /* Current image styling */
