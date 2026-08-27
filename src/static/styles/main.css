@@ -1087,12 +1087,14 @@ small {
     box-sizing: border-box;
     width: 100%;
     justify-self: stretch;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .plugins-container .plugin-item:hover {
     background: var(--button-bg);
     border-color: var(--text-secondary);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px var(--shadow-light);
 }
 
 .plugins-container .plugin-item .icon-image {
