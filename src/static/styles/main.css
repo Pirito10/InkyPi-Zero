@@ -103,20 +103,36 @@ body {
 
 /* Header styling */
 .header {
-    text-align: left;
+    display: grid;
+    /* Equal 1fr side columns keep the title centered on the header's own
+       width regardless of the left/right icon groups' different sizes -
+       flex:1 on the title alone centers it in the leftover space instead,
+       which isn't the same thing when the two icon groups aren't the same width. */
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
     margin-bottom: 20px;
 }
 
 .header h1 {
+    text-align: center;
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-bottom: 0;
-    display: inline-block;
     padding-bottom: 8px;
     transition: color 0.3s ease;
+}
+
+.header > .dark-mode-toggle {
+    justify-self: start;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    justify-self: end;
 }
 
 /* Current image styling */
@@ -397,6 +413,17 @@ small {
     background-color: var(--accent-warn-hover);
 }
 
+/* Neutral, so it recedes next to a .warn confirm button instead of competing with it */
+.action-button.secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+}
+
+.action-button.secondary:hover {
+    background-color: var(--button-hover);
+}
+
 .action-button:hover {
     background-color: var(--accent-hover);
 }
@@ -429,10 +456,93 @@ small {
     transition: all 0.3s ease;
 }
 
+.form-input:hover {
+    border-color: var(--text-secondary);
+}
+
 .form-input:focus {
     outline: none;
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 2px var(--input-focus);
+}
+
+/* Custom radio buttons, matching the app's accent color instead of the
+   browser default blue. Shared here for the same reason as .select-wrapper
+   below: refresh_settings_form.html is included from plugin.html too. */
+input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+input[type="radio"]:hover {
+    border-color: var(--text-secondary);
+}
+
+input[type="radio"]:checked {
+    border-color: var(--accent-primary);
+}
+
+input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background-color: var(--accent-primary);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Custom checkboxes, same rationale as the radio buttons above - several
+   plugin settings pages (calendar, weather, countdown...) use plain
+   checkboxes that otherwise render in the browser's native blue. This is
+   overridden for toggle-style checkboxes by the more specific
+   .toggle-checkbox / ".toggle-switch input" rules further down, which are
+   declared after this block and so still win. */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    background-color: var(--input-bg);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--text-secondary);
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 /* Custom select arrow. Shared here (rather than in a page-specific stylesheet)
@@ -489,6 +599,12 @@ small {
     transition: 0.3s;
 }
 
+/* The checkbox itself is hidden at 0x0, so the label is what the user
+   actually hovers - matches .toggle-switch:hover's ring in settings.css. */
+.toggle-label:hover {
+    box-shadow: 0 0 0 3px var(--shadow-light);
+}
+
 /* Toggle Knob */
 .toggle-label::before {
     position: absolute;
@@ -530,7 +646,8 @@ small {
 }
 
 .file-upload-label:active {
-    background-color: #d1d5db;
+    background-color: var(--button-hover);
+    filter: brightness(0.92);
 }
 
 /* Hide the default file input */
@@ -571,7 +688,7 @@ small {
 }
 
 .image-option.selected {
-    border-color: #007bff;
+    border-color: var(--accent-primary);
 }
 
 /* Settings button styling */
@@ -581,7 +698,6 @@ small {
     text-decoration: none;
     padding: 10px 15px;
     border-radius: 8px;
-    float: right;
     cursor: pointer;
     transition: all 0.3s ease;
     background-color: transparent;
@@ -660,11 +776,14 @@ small {
 }
 
 @keyframes fadeIn {
+    /* Scale only, no opacity - animating opacity here meant the modal card
+       spent its first ~300ms partially see-through, easy to catch mid-fade
+       in a screenshot (or just a fast click) and mistake for a rendering bug. */
     from {
-        opacity: 0;
+        transform: scale(0.95);
     }
     to {
-        opacity: 1;
+        transform: scale(1);
     }
 }
 
@@ -1008,9 +1127,9 @@ small {
 }
 
 .button-group button.active {
-    background-color: #007BFF;
+    background-color: var(--accent-primary);
     color: white;
-    border-color: #007BFF;
+    border-color: var(--accent-primary);
     z-index: 2;
 }
 
@@ -1046,9 +1165,9 @@ small {
 }
 
 .sort-toggle.active {
-    background: #4CAF50;
+    background: var(--accent-primary);
     color: #fff;
-    border-color: #4CAF50;
+    border-color: var(--accent-primary);
 }
 
 /* Grid View (default) */
@@ -1072,12 +1191,14 @@ small {
     box-sizing: border-box;
     width: 100%;
     justify-self: stretch;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .plugins-container .plugin-item:hover {
     background: var(--button-bg);
     border-color: var(--text-secondary);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px var(--shadow-light);
 }
 
 .plugins-container .plugin-item .icon-image {
@@ -1147,8 +1268,8 @@ small {
 }
 
 .plugins-container.sorting .plugin-item:hover {
-    border-color: #4CAF50;
-    background: rgba(76, 175, 80, 0.05);
+    border-color: var(--accent-primary);
+    background: rgba(26, 188, 156, 0.08);
 }
 
 .plugins-container.sorting .plugin-item.dragging {
@@ -1157,9 +1278,11 @@ small {
 }
 
 .plugins-container.sorting .plugin-item.drag-over {
-    border-color: #2196F3;
+    /* Darker accent-hover (vs. the plain accent-primary hover above) plus the
+       solid border keeps "drag target" visually distinct from a plain hover. */
+    border-color: var(--accent-hover);
     border-style: solid;
-    background: rgba(33, 150, 243, 0.1);
+    background: rgba(26, 188, 156, 0.18);
 }
 
 .sort-hint {

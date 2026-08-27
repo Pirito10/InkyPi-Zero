@@ -1,5 +1,5 @@
 {
-    "name": "InkyPi",
+    "name": "Aniversario 2026",
     "display_type": "epd7in5_V2",
     "resolution": [
         800,
@@ -11,5 +11,15 @@
     "scheduler_sleep_time": 60,
     "startup": true,
     "timezone": "Europe/Madrid",
-    "time_format": "24h"
+    "time_format": "24h",
+    "plugin_order": [
+        "clock",
+        "countdown",
+        "year_progress",
+        "image_upload",
+        "weather",
+        "calendar",
+        "agenda",
+        "microsoft_todo"
+    ]
 }

@@ -100,15 +100,15 @@
                     <h1 class="app-title">Configuración</h1>
                 </div>
                 <div class="header-actions">
-                    <button class="header-button" style="background-color: #1E88E5; color: #fff;" onclick="handleClearDisplay()">
+                    <button class="header-button info-blue" onclick="handleClearDisplay()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                         Apagar pantalla
                     </button>
-                    <button class="header-button" style="background-color: #FFD600; color: #333;" onclick="handleShutdown(true)">
+                    <button class="header-button warn-yellow" onclick="handleShutdown(true)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                         Reiniciar
                     </button>
-                    <button class="header-button" style="background-color: #E53935; color: #fff;" onclick="handleShutdown(false)">
+                    <button class="header-button danger-red" onclick="handleShutdown(false)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                         Apagar
                     </button>
@@ -212,13 +212,6 @@
                     <div class="settings-section-body">
                         <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 14px;">
                             <div class="slider-row">
-                                <label for="saturation">Saturación</label>
-                                <input type="range" id="saturation" name="saturation" min="0" max="2" step="0.1"
-                                       value="{{ device_settings.get('image_settings', {}).get('saturation', 1.0) }}"
-                                       oninput="updateSliderValue(this)">
-                                <span class="slider-value" id="saturation-value">{{ device_settings.get('image_settings', {}).get('saturation', 1.0) }}</span>
-                            </div>
-                            <div class="slider-row">
                                 <label for="contrast">Contraste</label>
                                 <input type="range" id="contrast" name="contrast" min="0" max="2" step="0.1"
                                        value="{{ device_settings.get('image_settings', {}).get('contrast', 1.0) }}"
@@ -246,7 +239,7 @@
                 <div class="settings-section">
                     <button type="button" class="settings-section-header" onclick="toggleSection(this)">
                         <span class="settings-section-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                         </span>
                         <span class="settings-section-title">Técnico</span>
                         <svg class="settings-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>

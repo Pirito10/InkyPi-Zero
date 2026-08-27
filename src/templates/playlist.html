@@ -19,34 +19,57 @@
     <script src="{{ url_for('static', filename='scripts/response_modal.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/refresh_settings_manager.js') }}"></script>
     <script>
-        async function deletePluginInstance(playlistName, pluginId, pluginInstance) {
-            if (!confirm(`¿Eliminar "${pluginInstance}" de la lista "${playlistName}"?`)) {
-                return;
-            }
-            try {
-                const response = await fetch("{{ url_for('plugin.delete_plugin_instance') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        playlist_name: playlistName,
-                        plugin_id: pluginId,
-                        plugin_instance: pluginInstance
-                    })
-                });
+        let pendingConfirmAction = null;
 
-                const result = await response.json();
-                if (response.ok) {
-                    sessionStorage.setItem("storedMessage", JSON.stringify({ type: "success", text: `¡Éxito! ${result.message}` }));
-                    location.reload();
-                } else {
-                    showResponseModal('failure', `¡Error!  ${result.error}`);
+        function showConfirmModal(title, text, onConfirm) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalText').textContent = text;
+            pendingConfirmAction = onConfirm;
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            pendingConfirmAction = null;
+        }
+
+        function runConfirmedAction() {
+            const action = pendingConfirmAction;
+            closeConfirmModal();
+            if (action) action();
+        }
+
+        function deletePluginInstance(playlistName, pluginId, pluginInstance) {
+            showConfirmModal(
+                'Eliminar instancia',
+                `¿Eliminar "${pluginInstance}" de la lista "${playlistName}"?`,
+                async () => {
+                    try {
+                        const response = await fetch("{{ url_for('plugin.delete_plugin_instance') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                playlist_name: playlistName,
+                                plugin_id: pluginId,
+                                plugin_instance: pluginInstance
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok) {
+                            sessionStorage.setItem("storedMessage", JSON.stringify({ type: "success", text: `¡Éxito! ${result.message}` }));
+                            location.reload();
+                        } else {
+                            showResponseModal('failure', `¡Error!  ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Se ha producido un error al procesar tu solicitud.');
+                    }
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Se ha producido un error al procesar tu solicitud.');
-            }
+            );
         }
 
         function showThumbnailPreview(playlistName, pluginId, pluginName, instanceName) {
@@ -69,11 +92,19 @@
         window.onclick = function(event) {
             const thumbnailModal = document.getElementById('thumbnailPreviewModal');
             const refreshModal = document.getElementById('refreshSettingsModal');
+            const playlistModal = document.getElementById('playlistModal');
+            const confirmModal = document.getElementById('confirmModal');
             if (event.target === thumbnailModal) {
                 closeThumbnailPreview();
             }
             if (event.target === refreshModal) {
                 closeRefreshModal();
+            }
+            if (event.target === playlistModal) {
+                closeModal();
+            }
+            if (event.target === confirmModal) {
+                closeConfirmModal();
             }
         }
 
@@ -211,28 +242,31 @@
             }
         }
 
-        async function deletePlaylist() {
+        function deletePlaylist() {
             let name = document.getElementById("editingPlaylistName").value;
-            if (!confirm(`¿Eliminar la lista "${name}" y todos sus plugins? Esta acción no se puede deshacer.`)) {
-                return;
-            }
-            try {
-                const response = await fetch("{{ url_for('playlist.delete_playlist', playlist_name='') }}" + name, {
-                    method: "DELETE",
-                });
+            closeModal(); // Close the edit-playlist modal first, the confirm modal replaces it
+            showConfirmModal(
+                'Eliminar lista',
+                `¿Eliminar la lista "${name}" y todos sus plugins? Esta acción no se puede deshacer.`,
+                async () => {
+                    try {
+                        const response = await fetch("{{ url_for('playlist.delete_playlist', playlist_name='') }}" + name, {
+                            method: "DELETE",
+                        });
 
-                const result = await response.json();
-                if (response.ok) {
-                    closeModal(); // Close the modal after success
-                    sessionStorage.setItem("storedMessage", JSON.stringify({ type: "success", text: `¡Éxito! ${result.message}` }));
-                    location.reload();
-                } else {
-                    showResponseModal('failure', `¡Error!  ${result.error}`);
+                        const result = await response.json();
+                        if (response.ok) {
+                            sessionStorage.setItem("storedMessage", JSON.stringify({ type: "success", text: `¡Éxito! ${result.message}` }));
+                            location.reload();
+                        } else {
+                            showResponseModal('failure', `¡Error!  ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error("Error:", error);
+                        alert('Se ha producido un error al procesar tu solicitud.');
+                    }
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                alert('Se ha producido un error al procesar tu solicitud.');
-            }
+            );
         }
 
         // Populates the interval number + unit fields in the create/edit playlist modal
@@ -356,7 +390,7 @@
         <div class="app-header">
             <div class="header-content">
                 <div class="title-container">
-                    <svg class="app-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <svg class="app-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
                     <h1 class="app-title">Listas de reproducción</h1>
                 </div>
                 <button class="header-button header-button-icon" onclick="openCreateModal()">
@@ -373,7 +407,7 @@
             <div class="playlist-item {% if playlist.name == playlist_config.active_playlist %}active{% endif %}">
                     <div class="playlist-header">
                         <span class="playlist-title-group">
-                            <svg class="playlist-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <svg class="playlist-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
                             <span class="playlist-title">{{ playlist.name }}</span>
                             <span class="playlist-time-range">{{ playlist.start_time }} – {{ playlist.end_time }}</span>
                         </span>
@@ -516,6 +550,20 @@
             <h2 id="thumbnailPreviewTitle">Vista previa</h2>
             <div class="separator"></div>
             <img id="thumbnailPreviewImage" src="" alt="Vista previa de la instancia del plugin">
+        </div>
+    </div>
+
+    <!-- Shared Delete Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeConfirmModal()">×</span>
+            <h2 id="confirmModalTitle"></h2>
+            <div class="separator"></div>
+            <p id="confirmModalText"></p>
+            <div class="buttons-container">
+                <button type="button" class="action-button secondary" onclick="closeConfirmModal()">Cancelar</button>
+                <button type="button" class="action-button warn" onclick="runConfirmedAction()">Eliminar</button>
+            </div>
         </div>
     </div>
 </body>
