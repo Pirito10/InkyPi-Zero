@@ -42,6 +42,7 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            cursor: pointer;
             transition: transform 0.2s ease;
         }
 
@@ -49,10 +50,10 @@
             transform: scale(1.05);
         }
 
-        .library-photo .btn-delete,
-        .library-photo .btn-expand {
+        .library-photo .btn-delete {
             position: absolute;
             top: 6px;
+            right: 6px;
             width: 28px;
             height: 28px;
             border: none;
@@ -61,26 +62,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .library-photo .btn-delete {
-            right: 6px;
             background: rgba(229, 57, 53, 0.9);
             color: white;
         }
 
         .library-photo .btn-delete:hover {
             background: #C62828;
-        }
-
-        .library-photo .btn-expand {
-            left: 6px;
-            background: rgba(0, 0, 0, 0.55);
-            color: white;
-        }
-
-        .library-photo .btn-expand:hover {
-            background: rgba(0, 0, 0, 0.75);
         }
 
         .library-photo .usage-badge {
@@ -160,10 +147,7 @@
             <div id="library-grid" class="library-grid">
                 {% for photo in photos %}
                 <div class="library-photo" data-filename="{{ photo.filename }}">
-                    <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy" decoding="async">
-                    <button type="button" class="btn-expand" data-url="{{ photo.url }}" data-filename="{{ photo.filename }}" title="Ver grande">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </button>
+                    <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy" decoding="async" title="Ver grande">
                     <button type="button" class="btn-delete" data-filename="{{ photo.filename }}" title="Borrar">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                     </button>
@@ -202,7 +186,7 @@
             <div class="separator"></div>
             <p id="deleteConfirmText"></p>
             <div class="buttons-container">
-                <button type="button" class="action-button" onclick="closeDeleteConfirm()">Cancelar</button>
+                <button type="button" class="action-button secondary" onclick="closeDeleteConfirm()">Cancelar</button>
                 <button type="button" class="action-button warn" onclick="confirmDeletePhoto()">Borrar</button>
             </div>
         </div>
@@ -221,11 +205,12 @@
             const img = document.createElement('img');
             img.src = photo.url;
             img.alt = photo.filename;
+            img.title = 'Ver grande';
             img.loading = 'lazy';
             img.decoding = 'async';
+            img.addEventListener('click', () => openLightbox(photo.url, photo.filename));
             div.appendChild(img);
 
-            div.appendChild(createExpandButton(photo.url, photo.filename));
             div.appendChild(createDeleteButton(photo.filename));
             grid.appendChild(div);
         }
@@ -237,16 +222,6 @@
             button.title = 'Borrar';
             button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
             button.addEventListener('click', () => deletePhoto(filename));
-            return button;
-        }
-
-        function createExpandButton(url, filename) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn-expand';
-            button.title = 'Ver grande';
-            button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-            button.addEventListener('click', () => openLightbox(url, filename));
             return button;
         }
 
@@ -272,12 +247,13 @@
             document.body.appendChild(overlay);
         }
 
-        // Wire up buttons rendered server-side on page load
+        // Wire up buttons/images rendered server-side on page load
         document.querySelectorAll('.btn-delete[data-filename]').forEach(button => {
             button.addEventListener('click', () => deletePhoto(button.dataset.filename));
         });
-        document.querySelectorAll('.btn-expand[data-filename]').forEach(button => {
-            button.addEventListener('click', () => openLightbox(button.dataset.url, button.dataset.filename));
+        document.querySelectorAll('.library-photo img').forEach(img => {
+            const filename = img.closest('.library-photo').dataset.filename;
+            img.addEventListener('click', () => openLightbox(img.src, filename));
         });
 
         async function uploadPhotos() {
