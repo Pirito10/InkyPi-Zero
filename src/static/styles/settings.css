@@ -208,6 +208,14 @@
     transition: all 0.3s ease;
 }
 
+/* Same specificity as main.css's .select-wrapper select, loaded earlier -
+   without this, this rule's shorthand padding wins on source order and
+   clobbers the right padding main.css reserves for the chevron, squeezing
+   it against the text for anything longer than a couple of words. */
+.settings-field .select-wrapper select {
+    padding-right: 2.2rem;
+}
+
 .settings-field input[type="text"]:focus,
 .settings-field select:focus {
     outline: none;
