@@ -32,6 +32,7 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
+    min-width: 0;
 }
 
 .playlist-card-icon {
@@ -50,6 +51,11 @@
 .playlist-time-range {
     font-size: 0.85rem;
     color: var(--text-secondary);
+    /* A long playlist name wraps onto multiple lines rather than overflowing —
+       without this, the shrinking flex row also squeezed this span, wrapping
+       the time range itself into an unreadable stack. */
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Plugin rows */
