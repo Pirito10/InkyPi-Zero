@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify, current_app, render_template, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, render_template, send_from_directory, send_file
 from plugins.plugin_registry import get_plugin_instance
 from utils.app_utils import resolve_path, handle_request_files, parse_form
 from refresh_task import ManualRefresh, PlaylistRefresh
+import io
 import json
 import os
 import logging
@@ -259,3 +260,30 @@ def update_now():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify({"success": True, "message": "Display updated"}), 200
+
+@plugin_bp.route('/preview_now', methods=['POST'])
+def preview_now():
+    device_config = current_app.config['DEVICE_CONFIG']
+    display_manager = current_app.config['DISPLAY_MANAGER']
+
+    try:
+        plugin_settings = parse_form(request.form)
+        plugin_settings.update(handle_request_files(request.files))
+        plugin_id = plugin_settings.pop("plugin_id")
+
+        plugin_config = device_config.get_plugin(plugin_id)
+        if not plugin_config:
+            return jsonify({"error": f"Plugin '{plugin_id}' not found"}), 404
+
+        # Never touches refresh_task or the real/mock display - preview only.
+        plugin = get_plugin_instance(plugin_config)
+        image = plugin.generate_image(plugin_settings, device_config)
+        image = display_manager.preview_image(image, image_settings=plugin_config.get("image_settings", []))
+
+        buf = io.BytesIO()
+        image.save(buf, format='PNG')
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png')
+    except Exception as e:
+        logger.exception(f"Error in preview_now: {str(e)}")
+        return jsonify({"error": f"Se ha producido un error al generar la vista previa: {str(e)}"}), 500

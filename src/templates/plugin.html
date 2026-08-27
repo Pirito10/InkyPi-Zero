@@ -62,18 +62,9 @@
             });
         }
 
-        async function handleAction(action) {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            loadingIndicator.style.display = 'block';
-
-            // Gather plugin settings form data
+        function buildSettingsFormData() {
             const form = document.getElementById('settingsForm');
-            const scheduleForm = document.getElementById('scheduleForm');
-
             const formData = new FormData(form);
-            let url = '{{ url_for("plugin.update_now") }}';
-            let method = 'POST';
-            let clearFormOnSubmit = false;
 
             // Add uploaded files to the form under its key
             Object.keys(uploadedFiles).forEach(key => {
@@ -83,6 +74,20 @@
                     });
                 }
             });
+
+            return formData;
+        }
+
+        async function handleAction(action) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'block';
+
+            const form = document.getElementById('settingsForm');
+            const scheduleForm = document.getElementById('scheduleForm');
+            const formData = buildSettingsFormData();
+            let url = '{{ url_for("plugin.update_now") }}';
+            let method = 'POST';
+            let clearFormOnSubmit = false;
 
             if (action == "add_to_playlist"){
                 const refreshData = addRefreshManager.getFormData();
@@ -139,6 +144,55 @@
                 // Hide loading indicator after the action is complete
                 loadingIndicator.style.display = 'none';
             }
+        }
+
+        async function previewImage() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'block';
+
+            try {
+                const response = await fetch('{{ url_for("plugin.preview_now") }}', {
+                    method: 'POST',
+                    body: buildSettingsFormData()
+                });
+
+                if (!response.ok) {
+                    const result = await response.json();
+                    showResponseModal('failure', `Error! ${result.error}`);
+                    return;
+                }
+
+                const blob = await response.blob();
+                showImagePreview(URL.createObjectURL(blob));
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Se ha producido un error al procesar tu solicitud.');
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function showImagePreview(url) {
+            const overlay = document.createElement('div');
+            overlay.className = 'image-modal-overlay';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Vista previa';
+            overlay.appendChild(img);
+
+            function close() {
+                overlay.remove();
+                URL.revokeObjectURL(url);
+                document.removeEventListener('keydown', onKeyDown);
+            }
+            function onKeyDown(event) {
+                if (event.key === 'Escape') close();
+            }
+
+            overlay.addEventListener('click', close);
+            document.addEventListener('keydown', onKeyDown);
+            document.body.appendChild(overlay);
         }
 
         function openModal(modal_id) {
@@ -416,9 +470,11 @@
             <div class="buttons-container">
                 {% if plugin_instance %}
                     <button type="button" onclick="handleAction('update_instance')" class="action-button">Guardar</button>
+                    <button type="button" onclick="previewImage()" class="action-button">Previsualizar</button>
                     <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Guardar como...</button>
                 {% else %}
                     <button type="button" onclick="handleAction()" class="action-button left">Actualizar ahora</button>
+                    <button type="button" onclick="previewImage()" class="action-button">Previsualizar</button>
                     <button type="button" onclick="openModal('scheduleModal')" class="action-button right">Añadir a lista</button>
                 {% endif %}
             </div>
