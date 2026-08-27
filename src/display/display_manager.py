@@ -39,8 +39,21 @@ class DisplayManager:
         else:
             raise ValueError(f"Unsupported display type: {display_type}")
 
+    def _process_image(self, image, image_settings=[]):
+        """
+        Applies the same orientation/resize/inversion/enhancement steps a real
+        display send would, without any of display_image()'s side effects
+        (saving current_image_file, writing to the hardware/mock display).
+        Shared by display_image() and preview_image().
+        """
+        image = change_orientation(image, self.device_config.get_config("orientation"))
+        image = resize_image(image, self.device_config.get_resolution(), image_settings)
+        if self.device_config.get_config("inverted_image"): image = image.rotate(180)
+        image = apply_image_enhancement(image, self.device_config.get_config("image_settings"))
+        return image
+
     def display_image(self, image, image_settings=[]):
-        
+
         """
         Delegates image rendering to the appropriate display instance.
 
@@ -53,14 +66,18 @@ class DisplayManager:
         logger.info(f"Saving image to {self.device_config.current_image_file}")
         image.save(self.device_config.current_image_file)
 
-        # Resize and adjust orientation
-        image = change_orientation(image, self.device_config.get_config("orientation"))
-        image = resize_image(image, self.device_config.get_resolution(), image_settings)
-        if self.device_config.get_config("inverted_image"): image = image.rotate(180)
-        image = apply_image_enhancement(image, self.device_config.get_config("image_settings"))
+        image = self._process_image(image, image_settings)
 
         # Pass to the concrete instance to render to the device.
         self.display.display_image(image, image_settings)
+
+    def preview_image(self, image, image_settings=[]):
+        """
+        Applies the same processing display_image() would, without saving
+        current_image_file or touching the display — for showing a plugin
+        a user hasn't committed to yet.
+        """
+        return self._process_image(image, image_settings)
 
     def clear_and_sleep(self):
         """Clears the screen and puts the display to sleep, ready for
