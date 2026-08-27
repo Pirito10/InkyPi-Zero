@@ -72,36 +72,43 @@ def get_fonts():
             })
     return fonts_list
 
-def generate_startup_image(dimensions=(800,480)):
-    bg_color = (255,255,255)
-    text_color = (0,0,0)
+def _draw_centered_message(dimensions, title, subtitle_lines, title_font_size_ratio=0.11):
+    bg_color = (255, 255, 255)
+    text_color = (0, 0, 0)
     width, height = dimensions
-
-    hostname = socket.gethostname()
-    ip = get_ip_address()
 
     image = Image.new("RGBA", dimensions, bg_color)
     image_draw = ImageDraw.Draw(image)
 
-    title_font_size = width * 0.145
-    image_draw.text((width/2, height/2), "inkypi", anchor="mm", fill=text_color, font=get_font("Jost", title_font_size))
+    title_font_size = width * title_font_size_ratio
+    image_draw.text((width/2, height/2), title, anchor="mm", fill=text_color,
+                     font=get_font("Jost", title_font_size, "bold"))
 
-    text = f"To get started, visit http://{hostname}.local"
-    text_font_size = width * 0.032
-
-    # Draw the instructions
+    subtitle_font_size = width * 0.032
+    subtitle_font = get_font("Jost", subtitle_font_size)
     y_text = height * 3 / 4
-    image_draw.text((width/2, y_text), text, anchor="mm", fill=text_color, font=get_font("Jost", text_font_size))
-
-    # Draw the IP on a line below
-    ip_text = f"or http://{ip}"
-    ip_text_font_size = width * 0.032
-    bbox = image_draw.textbbox((0, 0), text, font=get_font("Jost", text_font_size))
-    text_height = bbox[3] - bbox[1]
-    ip_y = y_text + text_height * 1.35
-    image_draw.text((width/2, ip_y), ip_text, anchor="mm", fill=text_color, font=get_font("Jost", ip_text_font_size))
+    line_height = subtitle_font_size * 1.35
+    # Center the block of N lines around y_text instead of stacking downward from it
+    start_y = y_text - (len(subtitle_lines) - 1) * line_height / 2
+    for i, line in enumerate(subtitle_lines):
+        image_draw.text((width/2, start_y + i * line_height), line, anchor="mm",
+                         fill=text_color, font=subtitle_font)
 
     return image
+
+def generate_gift_ready_image(dimensions=(800, 480)):
+    """First screen: kept on the display while unplugged, before the gift is wrapped up."""
+    return _draw_centered_message(dimensions, "Feliz aniversario", ["Enchúfame y espera instrucciones"])
+
+def generate_startup_image(dimensions=(800, 480)):
+    """Second screen: shown automatically on the recipient's first real boot (see the
+    'startup' config flag in inkypi.py) - tells them how to reach the web UI."""
+    hostname = socket.gethostname()
+    ip = get_ip_address()
+    return _draw_centered_message(dimensions, "¡Ya casi está!",
+                                   [f"Entra a http://{hostname}.local", "desde el navegador de tu ordenador y configúrame",
+                                    f"(o http://{ip} si lo anterior no funciona)"],
+                                   title_font_size_ratio=0.09)
 
 def parse_form(request_form):
     request_dict = request_form.to_dict()
