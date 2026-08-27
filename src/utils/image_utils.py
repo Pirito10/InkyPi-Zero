@@ -63,9 +63,6 @@ def apply_image_enhancement(img, image_settings={}):
     # Apply Contrast
     img = ImageEnhance.Contrast(img).enhance(image_settings.get("contrast", 1.0))
 
-    # Apply Saturation (Color)
-    img = ImageEnhance.Color(img).enhance(image_settings.get("saturation", 1.0))
-
     # Apply Sharpness
     img = ImageEnhance.Sharpness(img).enhance(image_settings.get("sharpness", 1.0))
 

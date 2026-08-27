@@ -54,7 +54,6 @@ def save_settings():
             "timezone": form_data.get("timezoneName"),
             "time_format": form_data.get("timeFormat"),
             "image_settings": {
-                "saturation": float(form_data.get("saturation", "1.0")),
                 "brightness": float(form_data.get("brightness", "1.0")),
                 "sharpness": float(form_data.get("sharpness", "1.0")),
                 "contrast": float(form_data.get("contrast", "1.0"))
