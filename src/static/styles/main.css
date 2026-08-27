@@ -103,20 +103,27 @@ body {
 
 /* Header styling */
 .header {
-    text-align: left;
+    display: flex;
+    align-items: center;
     margin-bottom: 20px;
 }
 
 .header h1 {
+    flex: 1;
+    text-align: center;
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-bottom: 0;
-    display: inline-block;
     padding-bottom: 8px;
     transition: color 0.3s ease;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
 }
 
 /* Current image styling */
@@ -581,7 +588,6 @@ small {
     text-decoration: none;
     padding: 10px 15px;
     border-radius: 8px;
-    float: right;
     cursor: pointer;
     transition: all 0.3s ease;
     background-color: transparent;
