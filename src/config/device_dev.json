@@ -1,5 +1,5 @@
 {
-    "name": "InkyPi Development",
+    "name": "Aniversario 2026",
     "display_type": "mock",
     "resolution": [
         800,
@@ -10,14 +10,14 @@
     "timezone": "Europe/Madrid",
     "time_format": "24h",
     "plugin_order": [
-        "agenda",
-        "calendar",
         "clock",
         "countdown",
+        "year_progress",
         "image_upload",
-        "microsoft_todo",
         "weather",
-        "year_progress"
+        "calendar",
+        "agenda",
+        "microsoft_todo"
     ],
     "playlist_config": {
         "playlists": [
